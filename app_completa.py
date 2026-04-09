@@ -248,58 +248,38 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet.set_row(3, 5)
 
 # =============================================================================
-# BOTANICAL LABORATORY CSS
+# CSS FONDO BLANCO + ACENTOS VERDES
 # =============================================================================
 CUSTOM_CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --parchment:       #f5f0e8;
-  --cream:           #faf7f2;
   --white:           #ffffff;
-  --forest:          #2c5f2e;
-  --forest-mid:      #3d7a40;
-  --forest-light:    #4e9452;
-  --sage:            #6a9b6d;
-  --sage-light:      #a8c5a0;
-  --sage-pale:       #e4efe4;
-  --amber:           #b5823a;
-  --amber-light:     #e8b86d;
-  --amber-pale:      #fdf3df;
-  --earth:           #7a5c3a;
-  --terracotta:      #c4622d;
-  --terracotta-pale: #fce8dc;
-  --sky:             #3d7fa8;
-  --sky-pale:        #d5e9f3;
-  --text-dark:       #1c2e1c;
-  --text-body:       #3a4e3a;
-  --text-mid:        #6b7f6b;
-  --text-light:      #9aad9a;
-  --border:          #d8e6d8;
-  --border-strong:   #a8c0a8;
-  --shadow-sm:       0 1px 4px rgba(44,95,46,0.07);
-  --shadow-md:       0 4px 18px rgba(44,95,46,0.10);
-  --shadow-lg:       0 8px 32px rgba(44,95,46,0.13);
+  --forest:          #1b4d1f;
+  --forest-mid:      #2c6e2f;
+  --forest-light:    #3f8a42;
+  --sage:            #5a9e5e;
+  --sage-light:      #8bc48f;
+  --sage-pale:       #e0f0e2;
+  --sage-ultrapale:  #f4faf4;
+  --text-dark:       #1a2e1a;
+  --text-body:       #2d4a2d;
+  --text-mid:        #5a715a;
+  --text-light:      #8aa28a;
+  --border:          #d4e4d4;
+  --border-strong:   #a8c4a8;
+  --shadow-sm:       0 1px 4px rgba(0,0,0,0.05);
+  --shadow-md:       0 4px 18px rgba(0,0,0,0.08);
   --r-sm: 6px;  --r-md: 10px;  --r-lg: 16px;
 }
 
-*, *::before, *::after { box-sizing: border-box; }
+* { box-sizing: border-box; }
 
 html, body {
-  background: var(--parchment) !important;
+  background: var(--white) !important;
   color: var(--text-body) !important;
   font-family: 'DM Sans', sans-serif !important;
   min-height: 100vh;
-}
-
-/* Warm organic radial gradients */
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background:
-    radial-gradient(ellipse 110% 55% at 15% -5%,  rgba(107,155,109,0.09) 0%, transparent 55%),
-    radial-gradient(ellipse 80%  50% at 85% 100%, rgba(181,130,58,0.06)  0%, transparent 55%);
-  pointer-events: none; z-index: 0;
 }
 
 .container-fluid { position: relative; z-index: 1; }
@@ -332,9 +312,8 @@ body::before {
 }
 
 .header-divider {
-  margin-top: 18px; height: 2px; border-radius: 2px; opacity: 0.45;
-  background: linear-gradient(90deg, var(--forest) 0%, var(--sage) 45%,
-                               var(--amber-light) 72%, transparent 100%);
+  margin-top: 18px; height: 2px; border-radius: 2px; opacity: 0.35;
+  background: linear-gradient(90deg, var(--forest) 0%, var(--sage) 45%, var(--sage-light) 72%, transparent 100%);
 }
 
 /* ── TABS ── */
@@ -355,7 +334,7 @@ body::before {
 .dash-tab:hover {
   color: var(--forest) !important;
   border-bottom-color: var(--sage-light) !important;
-  background: rgba(106,155,109,0.04) !important;
+  background: rgba(90,158,94,0.04) !important;
 }
 .dash-tab--selected {
   color: var(--forest) !important; font-weight: 600 !important;
@@ -389,9 +368,7 @@ body::before {
 }
 
 .border-forest { border-left: 3px solid var(--forest)     !important; }
-.border-amber  { border-left: 3px solid var(--amber)      !important; }
 .border-sage   { border-left: 3px solid var(--sage)       !important; }
-.border-terra  { border-left: 3px solid var(--terracotta) !important; }
 
 /* ── KPI BAR ── */
 .kpi-bar {
@@ -410,9 +387,7 @@ body::before {
   font-size: 1.7rem; font-weight: 700;
   color: var(--forest); line-height: 1;
 }
-.kpi-val.amber { color: var(--amber); }
 .kpi-val.sage  { color: var(--sage); }
-.kpi-val.sky   { color: var(--sky); }
 .kpi-val.sm    { font-size: 1rem; letter-spacing: 0.02em; }
 
 .kpi-lbl {
@@ -445,12 +420,12 @@ body::before {
   font-family: 'DM Sans',sans-serif !important; font-weight: 600 !important;
   font-size: 0.82rem !important; letter-spacing: 0.05em !important;
   padding: 10px 22px !important;
-  box-shadow: 0 2px 8px rgba(44,95,46,0.22) !important;
+  box-shadow: 0 2px 8px rgba(27,77,31,0.22) !important;
   transition: background 0.2s, box-shadow 0.2s !important;
 }
 .btn-primary:hover {
   background: var(--forest-mid) !important;
-  box-shadow: 0 4px 16px rgba(44,95,46,0.28) !important;
+  box-shadow: 0 4px 16px rgba(27,77,31,0.28) !important;
 }
 .btn-success {
   background: transparent !important;
@@ -462,7 +437,7 @@ body::before {
 }
 .btn-success:hover {
   background: var(--forest) !important; color: #fff !important;
-  box-shadow: 0 4px 14px rgba(44,95,46,0.22) !important;
+  box-shadow: 0 4px 14px rgba(27,77,31,0.22) !important;
 }
 
 /* ── ALERTS ── */
@@ -472,8 +447,8 @@ body::before {
   padding: 10px 16px !important;
 }
 .alert-warning {
-  background: var(--amber-pale) !important; color: var(--earth) !important;
-  border-left: 3px solid var(--amber) !important;
+  background: #fff3e0 !important; color: #7a6300 !important;
+  border-left: 3px solid #e6b800 !important;
 }
 .alert-info {
   background: var(--sage-pale) !important; color: var(--forest) !important;
@@ -484,15 +459,15 @@ body::before {
   border-left: 3px solid var(--forest) !important;
 }
 .alert-danger {
-  background: var(--terracotta-pale) !important; color: var(--terracotta) !important;
-  border-left: 3px solid var(--terracotta) !important;
+  background: #ffe6e6 !important; color: #b33a3a !important;
+  border-left: 3px solid #b33a3a !important;
 }
 
 /* ── UPLOAD ── */
 .upload-zone {
   border: 2px dashed var(--border-strong) !important;
   border-radius: var(--r-md) !important;
-  background: var(--cream) !important; color: var(--text-mid) !important;
+  background: var(--white) !important; color: var(--text-mid) !important;
   font-size: 0.84rem !important; transition: all 0.25s !important; cursor: pointer;
 }
 .upload-zone:hover {
@@ -527,7 +502,7 @@ body::before {
   font-family: 'JetBrains Mono',monospace !important; font-size: 0.78rem !important;
   border-color: var(--border) !important;
 }
-.dash-cell:hover { background: var(--cream) !important; }
+.dash-cell:hover { background: var(--sage-ultrapale) !important; }
 
 /* ── SECTION LABEL ── */
 .sec-lbl {
@@ -545,14 +520,14 @@ body::before {
 
 /* ── LOG ── */
 .log-box {
-  background: var(--cream); border: 1px solid var(--border);
+  background: var(--sage-ultrapale); border: 1px solid var(--border);
   border-radius: var(--r-sm); padding: 14px 16px;
   font-family: 'JetBrains Mono',monospace; font-size: 0.76rem;
   color: var(--text-mid); min-height: 58px;
 }
 .log-ok    { color: var(--forest); }
-.log-warn  { color: var(--amber); }
-.log-error { color: var(--terracotta); }
+.log-warn  { color: #b8860b; }
+.log-error { color: #b33a3a; }
 
 /* ── STATUS DOT ── */
 .dot {
@@ -572,28 +547,28 @@ body::before {
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: var(--parchment); }
+::-webkit-scrollbar-track { background: #f0f0f0; }
 ::-webkit-scrollbar-thumb { background: var(--sage-light); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--sage); }
 """
 
-# ── PLOTLY TEMPLATE ──────────────────────────────────────────────────────────
+# ── PLOTLY LAYOUT (fondo blanco/transparente) ─────────────────────────────────
 PLOT_LAYOUT = dict(
-    plot_bgcolor="rgba(250,247,242,0.7)",
+    plot_bgcolor="rgba(255,255,255,0.95)",
     paper_bgcolor="rgba(0,0,0,0)",
-    font=dict(family="DM Sans, sans-serif", color="#6b7f6b", size=10),
-    title_font=dict(family="DM Sans, sans-serif", color="#2c5f2e", size=12),
-    xaxis=dict(gridcolor="rgba(168,192,168,0.3)", linecolor="rgba(168,192,168,0.5)",
-               tickcolor="rgba(168,192,168,0.5)", zerolinecolor="rgba(168,192,168,0.25)"),
-    yaxis=dict(gridcolor="rgba(168,192,168,0.3)", linecolor="rgba(168,192,168,0.5)",
-               tickcolor="rgba(168,192,168,0.5)", zerolinecolor="rgba(168,192,168,0.25)"),
+    font=dict(family="DM Sans, sans-serif", color="#5a715a", size=10),
+    title_font=dict(family="DM Sans, sans-serif", color="#1b4d1f", size=12),
+    xaxis=dict(gridcolor="rgba(168,196,168,0.3)", linecolor="rgba(168,196,168,0.5)",
+               tickcolor="rgba(168,196,168,0.5)", zerolinecolor="rgba(168,196,168,0.25)"),
+    yaxis=dict(gridcolor="rgba(168,196,168,0.3)", linecolor="rgba(168,196,168,0.5)",
+               tickcolor="rgba(168,196,168,0.5)", zerolinecolor="rgba(168,196,168,0.25)"),
     margin=dict(t=50, b=70, l=50, r=20),
     height=350,
-    legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#6b7f6b")),
+    legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#5a715a")),
 )
 
-# Botanical palette for charts
-CHART_COLORS = ["#2c5f2e","#6a9b6d","#b5823a","#3d7fa8","#c4622d","#7a5c3a"]
+# Paleta de colores llamativos para gráficos
+CHART_COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
 
 # =============================================================================
 # APP
@@ -669,12 +644,12 @@ def render_tab(tab):
                 html.Div("Lotes activos hoy", className="kpi-lbl"),
             ], className="kpi-cell"),
             html.Div([
-                html.Div(f"{n_plantas:,}".replace(",","."), className="kpi-val amber"),
+                html.Div(f"{n_plantas:,}".replace(",","."), className="kpi-val sage"),
                 html.Div("Plantas totales", className="kpi-lbl"),
             ], className="kpi-cell"),
             html.Div([
                 html.Div(datetime.now().strftime("%d · %m · %Y"),
-                         className="kpi-val sage sm"),
+                         className="kpi-val sm"),
                 html.Div("Fecha de muestreo", className="kpi-lbl"),
             ], className="kpi-cell"),
             html.Div([
@@ -866,7 +841,7 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
             [html.I(className="fas fa-leaf me-2", style={"color":"var(--sage-light)"}),
              "Carga un archivo Excel para comenzar el análisis."],
             style={"textAlign":"center","padding":"28px","color":"var(--text-light)",
-                   "fontSize":"0.87rem","background":"var(--cream)",
+                   "fontSize":"0.87rem","background":"var(--white)",
                    "border":"1px dashed var(--border)","borderRadius":"var(--r-md)"}
         )
         return "", [], msg, None, ef, ef, ef, ef, ef, ef
@@ -968,13 +943,13 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
     kpi = html.Div([
         html.Div([html.Div(f"{ts:.1f}%".replace('.',','),  className="kpi-val"),
                   html.Div("Supervivencia", className="kpi-lbl")], className="kpi-cell"),
-        html.Div([html.Div(f"{tc:.1f}%".replace('.',','),  className="kpi-val amber"),
+        html.Div([html.Div(f"{tc:.1f}%".replace('.',','),  className="kpi-val sage"),
                   html.Div("Talla comercial", className="kpi-lbl")], className="kpi-cell"),
-        html.Div([html.Div(f"{int(tot):,}".replace(",","."), className="kpi-val sage sm"),
+        html.Div([html.Div(f"{int(tot):,}".replace(",","."), className="kpi-val sm"),
                   html.Div("Macetas muestreadas", className="kpi-lbl")], className="kpi-cell"),
         html.Div([html.Div(str(lm), className="kpi-val sm"),
                   html.Div("Lote", className="kpi-lbl")], className="kpi-cell"),
-        html.Div([html.Div(str(fm), className="kpi-val sky sm"),
+        html.Div([html.Div(str(fm), className="kpi-val sm"),
                   html.Div("Fecha muestreo", className="kpi-lbl")], className="kpi-cell"),
     ], className="kpi-bar")
 
@@ -1010,7 +985,7 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
                           marker_line_width=0.8, opacity=0.88)
         lay = dict(PLOT_LAYOUT)
         lay["title"] = {"text": titulo,
-                        "font":{"family":"DM Sans,sans-serif","color":"#2c5f2e","size":12}}
+                        "font":{"family":"DM Sans,sans-serif","color":"#1b4d1f","size":12}}
         lay["xaxis"] = dict(PLOT_LAYOUT["xaxis"],
                             tickmode='array', tickvals=filas_u,
                             ticktext=filas_u, tickangle=-45)
