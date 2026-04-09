@@ -37,7 +37,6 @@ def es_lote_peru(row):
     imc = row.get("I-M-C", "")
     return isinstance(imc, str) and "MN" in imc.upper()
 
-# Filtrar por fecha actual (solo para hoy)
 hoy_date = datetime.now().date()
 if 'fecha_activadora' in muestreos_hoy_raw.columns:
     muestreos_hoy_raw['fecha_activadora'] = pd.to_datetime(muestreos_hoy_raw['fecha_activadora'], errors='coerce')
@@ -76,14 +75,12 @@ def generar_datos_lote(lote):
     imc_raw = lote.get("I-M-C", "")
     if pd.isna(imc_raw):
         imc_raw = ""
-
     cantidad = extraer_cantidad_desde_imc(str(imc_raw))
     if cantidad == 0:
         cantidad = lote.get("Macetas actuales", 0)
         cantidad = int(cantidad) if not pd.isna(cantidad) else 0
     else:
         cantidad = int(cantidad)
-
     imc_val = imc_raw
     bandejas_val = lote.get("Bandeja", 0)
     if pd.isna(bandejas_val):
@@ -95,7 +92,6 @@ def generar_datos_lote(lote):
     vol_match = re.search(r'(\d+(?:[.,]\d+)?)\s*L', str(macetero_raw))
     if vol_match:
         litros = float(vol_match.group(1).replace(",", "."))
-
     hileras = 20
 
     def calcular_tamano(c):
@@ -249,99 +245,721 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet.set_row(3, 5)
 
 # =============================================================================
-# APP DASH
+# CUSTOM CSS — DARK TECH / BIOPUNK AESTHETIC
 # =============================================================================
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
-server = app.server
-app.title = "MACRO - Muestreo y Supervivencia"
+CUSTOM_CSS = """
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Exo+2:wght@200;300;400;600&display=swap');
 
-app.layout = dbc.Container([
-    html.H1("Sistema de Gestión de Muestreos", className="text-center my-4"),
-    dcc.Tabs(id="tabs", value="tab-muestra", children=[
-        dcc.Tab(label="📊 Cálculo de Tamaño de Muestra", value="tab-muestra"),
-        dcc.Tab(label="📈 Análisis de Supervivencia", value="tab-supervivencia"),
-    ]),
-    html.Div(id="tab-content", className="mt-3")
-], fluid=True)
+:root {
+  --bg-void:        #060a0f;
+  --bg-deep:        #0a1018;
+  --bg-panel:       #0d1520;
+  --bg-card:        #111d2b;
+  --bg-card-hover:  #152130;
+  --accent-cyan:    #00e5ff;
+  --accent-green:   #39ff8a;
+  --accent-lime:    #b0ff00;
+  --accent-amber:   #ffaa00;
+  --accent-red:     #ff3a5c;
+  --text-primary:   #e0f0ff;
+  --text-secondary: #6fa8c8;
+  --text-dim:       #3a6280;
+  --border-glow:    rgba(0, 229, 255, 0.25);
+  --border-subtle:  rgba(0, 229, 255, 0.08);
+  --glow-cyan:      0 0 20px rgba(0,229,255,0.35), 0 0 60px rgba(0,229,255,0.08);
+  --glow-green:     0 0 20px rgba(57,255,138,0.35), 0 0 60px rgba(57,255,138,0.08);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #react-entry-point, ._dash-loading, .dash-renderer {
+  background: var(--bg-void) !important;
+  color: var(--text-primary) !important;
+  font-family: 'Exo 2', sans-serif !important;
+  min-height: 100vh;
+}
+
+/* ── ANIMATED GRID BACKGROUND ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,229,255,0.04) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container-fluid { position: relative; z-index: 1; }
+
+/* ── HEADER ── */
+.app-header {
+  padding: 32px 0 20px;
+  text-align: center;
+  position: relative;
+}
+
+.app-header h1 {
+  font-family: 'Rajdhani', sans-serif !important;
+  font-size: 2.4rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase;
+  color: var(--accent-cyan) !important;
+  text-shadow: var(--glow-cyan);
+  margin: 0 !important;
+}
+
+.app-header .subtitle {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+.header-line {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-green), transparent);
+  margin-top: 20px;
+  opacity: 0.6;
+}
+
+/* ── TABS ── */
+.custom-tabs .tab-container {
+  display: flex;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-glow);
+  margin-bottom: 24px;
+}
+
+/* Override Dash default tab styles */
+.dash-tabs-container { background: transparent !important; }
+.dash-tabs { border-bottom: 1px solid var(--border-glow) !important; background: transparent !important; }
+
+.dash-tab {
+  font-family: 'Rajdhani', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  color: var(--text-secondary) !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-bottom: none !important;
+  padding: 12px 28px !important;
+  transition: all 0.25s ease !important;
+  clip-path: polygon(8px 0%, 100% 0%, 100% 100%, 0% 100%);
+}
+
+.dash-tab:hover {
+  color: var(--accent-cyan) !important;
+  background: var(--bg-card-hover) !important;
+  border-color: var(--border-glow) !important;
+}
+
+.dash-tab--selected {
+  color: var(--accent-cyan) !important;
+  background: var(--bg-panel) !important;
+  border-color: var(--accent-cyan) !important;
+  border-bottom: 2px solid var(--accent-cyan) !important;
+  box-shadow: var(--glow-cyan) !important;
+}
+
+/* ── CARDS ── */
+.tech-card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 2px !important;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.tech-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-green));
+}
+
+.tech-card:hover {
+  border-color: var(--border-glow) !important;
+  box-shadow: 0 4px 32px rgba(0,229,255,0.1) !important;
+}
+
+.card { background: var(--bg-card) !important; border: 1px solid var(--border-subtle) !important; border-radius: 2px !important; }
+.card-header {
+  background: var(--bg-panel) !important;
+  border-bottom: 1px solid var(--border-glow) !important;
+  font-family: 'Rajdhani', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 0.15em !important;
+  text-transform: uppercase !important;
+  color: var(--accent-cyan) !important;
+  padding: 10px 16px !important;
+}
+.card-body { background: var(--bg-card) !important; color: var(--text-primary) !important; }
+
+/* ── BUTTONS ── */
+.btn-primary {
+  background: transparent !important;
+  border: 1px solid var(--accent-cyan) !important;
+  color: var(--accent-cyan) !important;
+  font-family: 'Rajdhani', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase !important;
+  padding: 10px 24px !important;
+  border-radius: 1px !important;
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  transition: all 0.2s ease !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent-cyan);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease;
+  z-index: -1;
+}
+
+.btn-primary:hover {
+  color: var(--bg-void) !important;
+  background: var(--accent-cyan) !important;
+  box-shadow: var(--glow-cyan) !important;
+}
+
+.btn-success {
+  background: transparent !important;
+  border: 1px solid var(--accent-green) !important;
+  color: var(--accent-green) !important;
+  font-family: 'Rajdhani', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase !important;
+  padding: 10px 24px !important;
+  border-radius: 1px !important;
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  transition: all 0.2s ease !important;
+}
+
+.btn-success:hover {
+  color: var(--bg-void) !important;
+  background: var(--accent-green) !important;
+  box-shadow: var(--glow-green) !important;
+}
+
+/* ── ALERTS ── */
+.alert {
+  border-radius: 1px !important;
+  border-left: 3px solid var(--accent-amber) !important;
+  background: rgba(255,170,0,0.06) !important;
+  color: var(--accent-amber) !important;
+  border-top: none !important; border-right: none !important; border-bottom: none !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 0.78rem !important;
+}
+
+.alert-info {
+  border-left-color: var(--accent-cyan) !important;
+  background: rgba(0,229,255,0.05) !important;
+  color: var(--accent-cyan) !important;
+}
+
+.alert-success {
+  border-left-color: var(--accent-green) !important;
+  background: rgba(57,255,138,0.05) !important;
+  color: var(--accent-green) !important;
+}
+
+/* ── LOTE LIST ── */
+.lote-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.lote-list li {
+  padding: 8px 14px;
+  margin-bottom: 4px;
+  background: var(--bg-panel);
+  border-left: 2px solid var(--accent-cyan);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.lote-list li:hover {
+  background: var(--bg-card-hover);
+  color: var(--accent-cyan);
+  border-left-color: var(--accent-green);
+}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone {
+  border: 1px dashed rgba(0,229,255,0.3) !important;
+  border-radius: 2px !important;
+  background: var(--bg-panel) !important;
+  color: var(--text-secondary) !important;
+  font-family: 'Exo 2', sans-serif !important;
+  font-size: 0.85rem !important;
+  transition: all 0.3s ease !important;
+  cursor: pointer;
+  position: relative;
+}
+
+.upload-zone::before {
+  content: '⬆ ';
+  color: var(--accent-cyan);
+}
+
+.upload-zone:hover {
+  border-color: var(--accent-cyan) !important;
+  background: rgba(0,229,255,0.04) !important;
+  color: var(--accent-cyan) !important;
+  box-shadow: inset 0 0 20px rgba(0,229,255,0.05) !important;
+}
+
+/* ── DROPDOWN ── */
+.Select-control, .Select-menu-outer {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-glow) !important;
+  border-radius: 1px !important;
+  color: var(--text-primary) !important;
+}
+
+.Select-value-label { color: var(--accent-cyan) !important; font-family: 'Share Tech Mono', monospace !important; }
+.Select-option { background: var(--bg-panel) !important; color: var(--text-secondary) !important; }
+.Select-option:hover { background: var(--bg-card-hover) !important; color: var(--accent-cyan) !important; }
+.Select-placeholder { color: var(--text-dim) !important; }
+
+.VirtualizedSelectOption { background: var(--bg-panel) !important; color: var(--text-secondary) !important; }
+.VirtualizedSelectFocusedOption { background: var(--bg-card-hover) !important; color: var(--accent-cyan) !important; }
+
+/* ── DATA TABLE ── */
+.dash-spreadsheet-container, .dash-table-container { background: transparent !important; }
+
+.dash-spreadsheet { background: var(--bg-card) !important; }
+
+.dash-header {
+  background: var(--bg-panel) !important;
+  color: var(--accent-cyan) !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.1em !important;
+  border-bottom: 1px solid var(--border-glow) !important;
+}
+
+.dash-cell {
+  background: var(--bg-card) !important;
+  color: var(--text-secondary) !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 0.75rem !important;
+  border-color: var(--border-subtle) !important;
+}
+
+.dash-cell:hover { background: var(--bg-card-hover) !important; color: var(--text-primary) !important; }
+
+/* ── GRAPHS ── */
+.js-plotly-plot .plotly { background: transparent !important; }
+
+/* ── STAT BADGE ── */
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-glow);
+  border-radius: 1px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin: 4px;
+}
+
+.stat-badge span { color: var(--accent-cyan); font-weight: bold; font-size: 0.9rem; }
+
+/* ── SECTION LABEL ── */
+.section-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-void); }
+::-webkit-scrollbar-thumb { background: var(--accent-cyan); opacity: 0.3; border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { opacity: 0.8; }
+
+/* ── SUMMARY CARD ── */
+.summary-stat {
+  text-align: center;
+  padding: 16px;
+  border-right: 1px solid var(--border-subtle);
+}
+.summary-stat:last-child { border-right: none; }
+.summary-stat .val {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  text-shadow: var(--glow-cyan);
+  line-height: 1;
+}
+.summary-stat .lbl {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* ── TICKER / PULSE ── */
+@keyframes pulse-border {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.pulse { animation: pulse-border 2s ease-in-out infinite; }
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+.header-scan {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+  opacity: 0.2;
+  animation: scan-line 8s linear infinite;
+  pointer-events: none;
+  z-index: 9999;
+}
+"""
 
 # =============================================================================
-# PESTAÑA 1: GENERACIÓN DE EXCEL MÚLTIPLE
+# APP DASH — REDESIGNED
 # =============================================================================
-@app.callback(
-    Output("tab-content", "children"),
-    Input("tabs", "value")
+app = dash.Dash(
+    __name__,
+    external_stylesheets=[
+        dbc.themes.CYBORG,
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css"
+    ]
 )
+
+# Inject custom CSS
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>MACRO — Sistema de Muestreos</title>
+        {%favicon%}
+        {%css%}
+        <style>
+''' + CUSTOM_CSS + '''
+        </style>
+    </head>
+    <body>
+        <div class="header-scan"></div>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>
+'''
+
+server = app.server
+app.title = "MACRO — Sistema de Muestreos"
+
+# ── PLOTLY TEMPLATE ─────────────────────────────────────────────────────────
+PLOT_LAYOUT = dict(
+    plot_bgcolor="rgba(13,21,32,0.8)",
+    paper_bgcolor="rgba(0,0,0,0)",
+    font=dict(family="Share Tech Mono, monospace", color="#6fa8c8", size=10),
+    title_font=dict(family="Rajdhani, sans-serif", color="#00e5ff", size=13),
+    xaxis=dict(
+        gridcolor="rgba(0,229,255,0.06)",
+        linecolor="rgba(0,229,255,0.2)",
+        tickcolor="rgba(0,229,255,0.2)",
+        zerolinecolor="rgba(0,229,255,0.1)",
+    ),
+    yaxis=dict(
+        gridcolor="rgba(0,229,255,0.06)",
+        linecolor="rgba(0,229,255,0.2)",
+        tickcolor="rgba(0,229,255,0.2)",
+        zerolinecolor="rgba(0,229,255,0.1)",
+    ),
+    margin=dict(t=55, b=75, l=50, r=20),
+    height=380,
+    legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#6fa8c8")),
+)
+
+CHART_COLORS = ["#00e5ff", "#39ff8a", "#b0ff00", "#ffaa00", "#ff3a5c", "#c47aff"]
+
+# ── LAYOUT ──────────────────────────────────────────────────────────────────
+app.layout = dbc.Container([
+
+    # Header
+    html.Div([
+        html.Div([
+            html.H1("MACRO // Sistema de Gestión de Muestreos"),
+            html.P("BIOTECNOLOGÍA APLICADA · CONTROL DE CALIDAD · ANÁLISIS EN TIEMPO REAL",
+                   className="subtitle"),
+        ], className="app-header"),
+        html.Div(className="header-line"),
+    ]),
+
+    # Tabs
+    dcc.Tabs(
+        id="tabs",
+        value="tab-muestra",
+        className="custom-tabs",
+        children=[
+            dcc.Tab(label="⬡  CÁLCULO DE MUESTRA", value="tab-muestra"),
+            dcc.Tab(label="◈  ANÁLISIS DE SUPERVIVENCIA", value="tab-supervivencia"),
+        ]
+    ),
+
+    html.Div(id="tab-content", style={"paddingTop": "8px"})
+
+], fluid=True, style={"maxWidth": "1400px", "margin": "0 auto", "padding": "0 24px 48px"})
+
+
+# =============================================================================
+# TAB ROUTING
+# =============================================================================
+@app.callback(Output("tab-content", "children"), Input("tabs", "value"))
 def render_tab(tab):
     if tab == "tab-muestra":
-        mensaje_exclusion = None
+        # ── Warning exclusion alert
+        alerta_excl = None
         if ids_excluidos:
-            ids_texto = ", ".join(str(id_) for id_ in ids_excluidos)
-            mensaje_exclusion = dbc.Alert(
-                [html.I(className="fas fa-info-circle me-2"), 
-                 f"⚠️ Los siguientes IDs corresponden a lotes en Vivero los Viñedos (PERÚ) no se incluyen en los muestreos de hoy: {ids_texto}"],
-                color="warning", dismissable=True, className="mt-2"
-            )
-        info_lotes = html.Div()
+            ids_texto = ", ".join(str(i) for i in ids_excluidos)
+            alerta_excl = html.Div([
+                html.Div([
+                    html.Span("⚠", style={"fontSize": "1rem", "marginRight": "10px", "color": "#ffaa00"}),
+                    html.Span(f"IDs excluidos (Vivero Perú · MN): {ids_texto}",
+                              style={"fontFamily": "Share Tech Mono, monospace", "fontSize": "0.75rem"})
+                ], className="alert")
+            ], style={"marginBottom": "16px"})
+
+        # ── Lote count badge
+        n_lotes = len(muestreos_hoy)
+        badge_row = html.Div([
+            html.Div([
+                html.Div(str(n_lotes), className="val"),
+                html.Div("LOTES HOY", className="lbl"),
+            ], className="summary-stat"),
+            html.Div([
+                html.Div(
+                    str(int(muestreos_hoy['Macetas actuales'].sum())) if 'Macetas actuales' in muestreos_hoy.columns else "—",
+                    className="val"
+                ),
+                html.Div("PLANTAS TOTALES", className="lbl"),
+            ], className="summary-stat"),
+            html.Div([
+                html.Div(datetime.now().strftime("%d/%m/%Y"), className="val",
+                         style={"fontSize": "1.1rem", "letterSpacing": "0.05em"}),
+                html.Div("FECHA ACTIVA", className="lbl"),
+            ], className="summary-stat"),
+        ], style={
+            "display": "flex",
+            "background": "var(--bg-card)",
+            "border": "1px solid var(--border-subtle)",
+            "marginBottom": "20px",
+        })
+
+        # ── Lote list card
         if not muestreos_hoy.empty:
-            info_lotes = dbc.Card(
-                dbc.CardBody([
-                    html.H5(f"Lotes a muestrear hoy ({len(muestreos_hoy)}):", className="card-title"),
-                    html.Ul([html.Li(f"{row['Código']} - {row.get('Variedad', '')} (ID: {row['ID']})") for _, row in muestreos_hoy.iterrows()])
-                ]), className="mb-3"
-            )
+            lote_items = [
+                html.Li([
+                    html.Span(f"[{row['ID']}]",
+                              style={"color": "var(--accent-green)", "marginRight": "10px", "fontSize": "0.72rem"}),
+                    html.Span(f"{row['Código']}",
+                              style={"color": "var(--accent-cyan)", "marginRight": "6px"}),
+                    html.Span(f"— {row.get('Variedad', '')}",
+                              style={"color": "var(--text-dim)", "fontSize": "0.75rem"}),
+                ])
+                for _, row in muestreos_hoy.iterrows()
+            ]
+            lote_card = dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-leaf me-2"),
+                    f"LOTES PROGRAMADOS HOY  ·  {n_lotes} ACTIVOS"
+                ]),
+                dbc.CardBody(
+                    html.Ul(lote_items, className="lote-list"),
+                    style={"maxHeight": "280px", "overflowY": "auto", "padding": "12px 16px"}
+                )
+            ], className="tech-card", style={"marginBottom": "20px"})
         else:
-            info_lotes = dbc.Alert("No hay lotes programados para hoy (sin MN).", color="info")
-        
-        return dbc.Row([
-            dbc.Col([
-                mensaje_exclusion if mensaje_exclusion else html.Div(),
-                info_lotes,
-                dbc.Button("Generar Excel de muestreo hoy", id="btn-generar-multiple", color="primary", className="w-100 mb-3"),
-                html.A("Descargar Excel", id="btn-descargar-multiple", href="", download="", className="btn btn-success w-100"),
-                dbc.Card([
-                    dbc.CardHeader("Resultado de la generación"),
-                    dbc.CardBody(html.Div(id="resultado-multiple"))
-                ], className="mt-4"),
-            ], width=12)
+            lote_card = html.Div(
+                "⊘  Sin lotes activos para hoy",
+                className="alert alert-info",
+                style={"marginBottom": "16px"}
+            )
+
+        # ── Action buttons
+        btn_row = dbc.Row([
+            dbc.Col(
+                dbc.Button([
+                    html.I(className="fas fa-file-excel me-2"),
+                    "GENERAR EXCEL DE MUESTREO"
+                ], id="btn-generar-multiple", color="primary", className="w-100"),
+                width=6
+            ),
+            dbc.Col(
+                html.A([
+                    html.I(className="fas fa-download me-2"),
+                    "DESCARGAR EXCEL"
+                ], id="btn-descargar-multiple", href="", download="",
+                   className="btn btn-success w-100"),
+                width=6
+            ),
+        ], className="g-3 mb-3")
+
+        # ── Result card
+        result_card = dbc.Card([
+            dbc.CardHeader([html.I(className="fas fa-terminal me-2"), "LOG DE GENERACIÓN"]),
+            dbc.CardBody(
+                html.Div(
+                    html.Span("// En espera de ejecución...",
+                              style={"fontFamily": "Share Tech Mono, monospace",
+                                     "fontSize": "0.78rem",
+                                     "color": "var(--text-dim)"}),
+                    id="resultado-multiple"
+                )
+            )
+        ], className="tech-card")
+
+        return html.Div([
+            alerta_excl or html.Div(),
+            badge_row,
+            lote_card,
+            btn_row,
+            result_card,
         ])
+
     else:
-        # Pestaña 2: Análisis de Supervivencia con selector de hoja
+        # ── TAB 2: Supervivencia
         return dbc.Container([
+            # Upload + sheet selector row
             dbc.Row([
                 dbc.Col([
+                    html.Div("// CARGAR ARCHIVO DE RESULTADOS", className="section-label"),
                     dcc.Upload(
                         id='upload-data',
                         children=html.Div([
-                            'Arrastra y suelta o ',
-                            html.A('Selecciona un archivo Excel')
+                            "Arrastra el archivo Excel o ",
+                            html.Span("haz clic para seleccionar",
+                                      style={"color": "var(--accent-cyan)", "textDecoration": "underline"})
                         ]),
                         style={
-                            'width': '100%', 'height': '60px', 'lineHeight': '60px',
-                            'borderWidth': '1px', 'borderStyle': 'dashed', 'borderRadius': '5px',
-                            'textAlign': 'center', 'margin': '10px'
+                            'width': '100%', 'height': '64px', 'lineHeight': '64px',
+                            'textAlign': 'center', 'cursor': 'pointer',
                         },
+                        className="upload-zone",
                         multiple=False
                     ),
-                    html.Div(id='selector-hoja-wrapper', style={'marginTop': '20px'}),
-                    dcc.Dropdown(id='selector-hoja', placeholder="Seleccione una hoja...", style={'marginBottom': '20px'}),
-                    html.Div(id='output-alertas', style={'marginTop': '20px'}),
-                    html.Div(id='output-data-upload', style={'marginTop': '20px'}),
-                ], width=12)
-            ]),
+                ], md=7),
+                dbc.Col([
+                    html.Div("// SELECCIONAR HOJA", className="section-label"),
+                    html.Div(id='selector-hoja-wrapper'),
+                    dcc.Dropdown(
+                        id='selector-hoja',
+                        placeholder="— seleccione hoja —",
+                        style={
+                            "background": "var(--bg-card)",
+                            "border": "1px solid var(--border-glow)",
+                            "borderRadius": "1px",
+                            "color": "var(--text-primary)",
+                            "fontFamily": "Share Tech Mono, monospace",
+                            "fontSize": "0.8rem",
+                        }
+                    ),
+                ], md=5),
+            ], className="g-4 mb-3"),
+
+            # Alerts
+            html.Div(id='output-alertas', style={"marginBottom": "16px"}),
+
+            # Summary / metadata card
+            html.Div(id='output-data-upload', style={"marginBottom": "20px"}),
+
+            # Charts row 1
+            html.Div("// INDICADORES DE CALIDAD", className="section-label", style={"marginBottom": "12px"}),
             dbc.Row([
-                dbc.Col(dcc.Graph(id="grafico-supervivencia", config={'displayModeBar': False}), width=4, style={'height': '450px'}),
-                dbc.Col(dcc.Graph(id="grafico-talla-comercial", config={'displayModeBar': False}), width=4, style={'height': '450px'}),
-                dbc.Col(dcc.Graph(id="grafico-ejes", config={'displayModeBar': False}), width=4, style={'height': '450px'}),
-            ], className="mt-3", style={'marginBottom': '20px'}),
+                dbc.Col(dcc.Graph(id="grafico-supervivencia",
+                                  config={'displayModeBar': False}), md=4),
+                dbc.Col(dcc.Graph(id="grafico-talla-comercial",
+                                  config={'displayModeBar': False}), md=4),
+                dbc.Col(dcc.Graph(id="grafico-ejes",
+                                  config={'displayModeBar': False}), md=4),
+            ], className="g-3 mb-2"),
+
+            # Charts row 2
             dbc.Row([
-                dbc.Col(dcc.Graph(id="grafico-ocupacion", config={'displayModeBar': False}), width=4, style={'height': '450px'}),
-                dbc.Col(dcc.Graph(id="grafico-altura", config={'displayModeBar': False}), width=4, style={'height': '450px'}),
-                dbc.Col(dcc.Graph(id="grafico-porcentaje-col", config={'displayModeBar': False}), width=4, style={'height': '450px'}),
-            ], className="mt-3", style={'marginBottom': '30px'}),
+                dbc.Col(dcc.Graph(id="grafico-ocupacion",
+                                  config={'displayModeBar': False}), md=4),
+                dbc.Col(dcc.Graph(id="grafico-altura",
+                                  config={'displayModeBar': False}), md=4),
+                dbc.Col(dcc.Graph(id="grafico-porcentaje-col",
+                                  config={'displayModeBar': False}), md=4),
+            ], className="g-3 mb-4"),
+
         ], fluid=True)
 
+
 # =============================================================================
-# CALLBACK PARA GENERAR EXCEL MÚLTIPLE (PESTAÑA 1)
+# CALLBACK GENERAR EXCEL (TAB 1)
 # =============================================================================
 @app.callback(
     [Output("btn-descargar-multiple", "href"),
@@ -352,15 +970,18 @@ def render_tab(tab):
 )
 def generar_excel_multiple(n_clicks):
     if not n_clicks:
-        return "", "", "Presione el botón para generar el Excel."
+        return "", "", "// En espera..."
     if muestreos_hoy.empty:
-        return "", "", "No hay lotes para muestrear hoy (todos contienen MN o no hay datos)."
-    
+        return "", "", html.Span("⊘  Sin lotes disponibles para muestreo hoy.",
+                                  style={"color": "var(--accent-amber)",
+                                         "fontFamily": "Share Tech Mono, monospace",
+                                         "fontSize": "0.8rem"})
+
     fecha_str = datetime.now().strftime("%d-%m-%Y")
     nombre_excel = f"MUESTREOS_MACRO_{fecha_str}.xlsx"
     output = BytesIO()
     workbook = xlsxwriter.Workbook(output)
-    
+
     lotes_procesados = []
     errores = []
     for _, lote in muestreos_hoy.iterrows():
@@ -379,22 +1000,31 @@ def generar_excel_multiple(n_clicks):
             lotes_procesados.append(codigo)
         except Exception as e:
             errores.append(f"{lote.get('Código')}: {str(e)}")
-    
+
     workbook.close()
     output.seek(0)
     excel_data = base64.b64encode(output.read()).decode("utf-8")
     href = f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{excel_data}"
-    
-    resultado = html.Div([
-        html.P(f"✅ Excel generado correctamente con {len(lotes_procesados)} hoja(s)."),
-        html.P(f"Lotes incluidos: {', '.join(lotes_procesados)}"),
-    ])
+
+    lines = [
+        html.Div(f"✓ PROCESO COMPLETADO  ·  {len(lotes_procesados)} HOJA(S) GENERADAS",
+                 style={"color": "var(--accent-green)", "marginBottom": "8px",
+                        "fontFamily": "Share Tech Mono, monospace", "fontSize": "0.78rem"}),
+        html.Div(f"LOTES: {', '.join(lotes_procesados)}",
+                 style={"color": "var(--text-secondary)", "fontFamily": "Share Tech Mono, monospace",
+                        "fontSize": "0.72rem"}),
+    ]
     if errores:
-        resultado.children.append(html.P(f"❌ Errores en: {', '.join(errores)}", style={"color": "red"}))
-    return href, nombre_excel, resultado
+        lines.append(
+            html.Div(f"✗ ERRORES: {', '.join(errores)}",
+                     style={"color": "var(--accent-red)", "marginTop": "8px",
+                            "fontFamily": "Share Tech Mono, monospace", "fontSize": "0.72rem"})
+        )
+    return href, nombre_excel, html.Div(lines)
+
 
 # =============================================================================
-# CALLBACK PARA SUPERVIVENCIA CON SELECCIÓN DE HOJA (PESTAÑA 2)
+# CALLBACK SUPERVIVENCIA (TAB 2)
 # =============================================================================
 @app.callback(
     [Output('selector-hoja-wrapper', 'children'),
@@ -412,40 +1042,46 @@ def generar_excel_multiple(n_clicks):
     [State('upload-data', 'filename')]
 )
 def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
-    empty_fig = {}
-    # Si no hay archivo subido
-    if contents is None:
-        return "", [], html.Div(["Por favor, carga un archivo Excel."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+    empty_fig = {"layout": {**PLOT_LAYOUT, "title": {"text": "// Sin datos"}}}
 
-    # Decodificar el archivo
+    if contents is None:
+        msg = html.Div(
+            "⊘  Carga un archivo Excel para comenzar el análisis.",
+            style={"fontFamily": "Share Tech Mono, monospace",
+                   "color": "var(--text-dim)", "fontSize": "0.8rem",
+                   "padding": "20px", "textAlign": "center",
+                   "border": "1px dashed var(--border-subtle)",
+                   "borderRadius": "2px"}
+        )
+        return "", [], msg, None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
 
-    # Obtener los nombres de las hojas
     try:
         excel_file = pd.ExcelFile(BytesIO(decoded))
         hojas = excel_file.sheet_names
     except Exception as e:
-        return "", [], html.Div([f"Error al leer el archivo: {str(e)}"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return "", [], html.Div(f"Error al leer archivo: {e}"), None, \
+               empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Si no hay hoja seleccionada, mostrar el dropdown y salir (sin análisis)
+    opciones = [{'label': h, 'value': h} for h in hojas]
+
     if hoja_seleccionada is None:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Seleccione una hoja:"), opciones, None, None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div(), opciones, None, None, \
+               empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Verificar que la hoja seleccionada exista
     if hoja_seleccionada not in hojas:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Hoja no encontrada, seleccione otra:"), opciones, html.Div(["Hoja no válida"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div(), opciones, \
+               html.Div("Hoja no válida.", style={"color": "var(--accent-red)"}), None, \
+               empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Leer la hoja seleccionada sin asumir header
     try:
         df_raw = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=None)
     except Exception as e:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Error al leer la hoja:"), opciones, html.Div([f"Error: {str(e)}"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div(), opciones, html.Div(f"Error: {e}"), None, \
+               empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Buscar la fila donde aparece "Fila" (encabezado de la tabla)
     header_row_idx = None
     for i in range(len(df_raw)):
         if df_raw.iloc[i, 0] == 'Fila':
@@ -453,173 +1089,211 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
             break
 
     if header_row_idx is None:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Seleccione otra hoja:"), opciones, html.Div(["No se encontró la fila de encabezado 'Fila' en esta hoja."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div(), opciones, \
+               html.Div("No se encontró el encabezado 'Fila'.",
+                        style={"color": "var(--accent-amber)",
+                               "fontFamily": "Share Tech Mono, monospace",
+                               "fontSize": "0.78rem"}), None, \
+               empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Leer los datos a partir de la fila siguiente al encabezado
     df = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=header_row_idx)
-
-    # Limpiar: eliminar filas donde 'Fila' no sea numérico
     df['Fila_temp'] = df['Fila'].astype(str).str.strip()
     mask_fila_valida = df['Fila_temp'].str.match(r'^\d+(\.\d+)?$', na=False)
     df = df[mask_fila_valida].copy()
     df.drop(columns=['Fila_temp'], inplace=True)
 
     if df.empty:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Seleccione otra hoja:"), opciones, html.Div(["No se encontraron filas de datos numéricos en la tabla."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div(), opciones, \
+               html.Div("Sin filas numéricas válidas.",
+                        style={"color": "var(--accent-amber)"}), None, \
+               empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Convertir columnas numéricas
     columnas_numericas = ['Máximo', 'Sobrevivencia', 'Talla Comercial', 'Ejes ≥ 2',
                           'Ocup sustrato ≥ 80%', 'Altura ≥ 12 cm']
     for col in columnas_numericas:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-        else:
-            df[col] = 0
+        df[col] = pd.to_numeric(df.get(col, 0), errors='coerce')
 
-    if '% Col' in df.columns:
-        df['% Col'] = pd.to_numeric(df['% Col'], errors='coerce')
-        columnas_numericas.append('% Col')
-    else:
-        df['% Col'] = 0
-
+    df['% Col'] = pd.to_numeric(df.get('% Col', 0), errors='coerce')
+    columnas_numericas.append('% Col')
     df[columnas_numericas] = df[columnas_numericas].fillna(0)
     df['Fila'] = pd.to_numeric(df['Fila'], errors='coerce').fillna(0).astype(int).astype(str)
 
-    if 'Máximo' not in df.columns:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Seleccione otra hoja:"), opciones, html.Div(["Columna 'Máximo' no encontrada."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
-
     total_maximo = df['Máximo'].sum()
     if total_maximo == 0:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Seleccione otra hoja:"), opciones, html.Div(["El total de 'Máximo' es cero, no se puede calcular porcentajes."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div(), opciones, \
+               html.Div("Total 'Máximo' = 0, sin datos para calcular.",
+                        style={"color": "var(--accent-red)"}), None, \
+               empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Cálculo de tasas
+    # ── KPIs
     total_sobrevivencia = df['Sobrevivencia'].sum()
-    tasa_supervivencia = (total_sobrevivencia / total_maximo) * 100
-    total_talla_comercial = df['Talla Comercial'].sum()
-    tasa_talla_comercial = (total_talla_comercial / total_maximo) * 100
-    total_ejes = df['Ejes ≥ 2'].sum()
-    tasa_ejes = (total_ejes / total_maximo) * 100
-    total_ocupacion = df['Ocup sustrato ≥ 80%'].sum()
-    tasa_ocupacion = (total_ocupacion / total_maximo) * 100
-    total_altura = df['Altura ≥ 12 cm'].sum()
-    tasa_altura = (total_altura / total_maximo) * 100
+    tasa_sup   = (total_sobrevivencia / total_maximo) * 100
+    tasa_tc    = (df['Talla Comercial'].sum() / total_maximo) * 100
+    tasa_ejes  = (df['Ejes ≥ 2'].sum() / total_maximo) * 100
+    tasa_ocup  = (df['Ocup sustrato ≥ 80%'].sum() / total_maximo) * 100
+    tasa_alt   = (df['Altura ≥ 12 cm'].sum() / total_maximo) * 100
+    tasa_col   = (df['% Col'].sum() / total_maximo) * 100 if df['% Col'].sum() > 0 else 0
 
-    if '% Col' in df.columns and df['% Col'].sum() > 0:
-        total_porcentaje_col = df['% Col'].sum()
-        tasa_porcentaje_col = (total_porcentaje_col / total_maximo) * 100
-    else:
-        tasa_porcentaje_col = 0
-
-    # Alarmas
+    # ── Alarmas
     condiciones = (
         (df['Sobrevivencia'] > df['Máximo']) |
         (df['Talla Comercial'] > df['Máximo']) |
         (df['Ejes ≥ 2'] > df['Máximo']) |
         (df['Ocup sustrato ≥ 80%'] > df['Máximo']) |
-        (df['Altura ≥ 12 cm'] > df['Máximo'])
+        (df['Altura ≥ 12 cm'] > df['Máximo']) |
+        (df['% Col'] > df['Máximo'])
     )
-    if '% Col' in df.columns and '% Col' in df:
-        condiciones = condiciones | (df['% Col'] > df['Máximo'])
-
     filas_alerta = df[condiciones]
 
-    alerta = html.Div([
-        html.H5("⚠️ Alarmas detectadas:", style={"color": "red"}),
-        html.P(f"Se encontraron {len(filas_alerta)} filas con valores fuera de rango."),
+    if not filas_alerta.empty:
+        alerta_ui = html.Div([
+            html.Div(f"⚠  {len(filas_alerta)} FILAS CON VALORES FUERA DE RANGO",
+                     style={"fontFamily": "Share Tech Mono, monospace",
+                            "color": "var(--accent-amber)",
+                            "fontSize": "0.78rem",
+                            "marginBottom": "10px",
+                            "borderLeft": "2px solid var(--accent-amber)",
+                            "paddingLeft": "10px"}),
+            dash_table.DataTable(
+                data=filas_alerta.to_dict('records'),
+                columns=[{'name': i, 'id': i} for i in filas_alerta.columns],
+                style_table={'overflowX': 'auto', 'background': 'var(--bg-card)'},
+                style_cell={
+                    'textAlign': 'center', 'padding': '5px',
+                    'fontSize': '11px', 'fontFamily': 'Share Tech Mono, monospace',
+                    'backgroundColor': 'var(--bg-panel)', 'color': 'var(--text-secondary)',
+                    'border': '1px solid var(--border-subtle)'
+                },
+                style_header={
+                    'backgroundColor': 'var(--bg-void)', 'fontWeight': 'bold',
+                    'color': 'var(--accent-cyan)', 'border': '1px solid var(--border-glow)'
+                },
+                page_size=8
+            )
+        ])
+    else:
+        alerta_ui = html.Div(
+            "✓  Sin alarmas detectadas — todos los valores dentro del rango esperado.",
+            style={"fontFamily": "Share Tech Mono, monospace",
+                   "color": "var(--accent-green)",
+                   "fontSize": "0.75rem",
+                   "borderLeft": "2px solid var(--accent-green)",
+                   "paddingLeft": "10px",
+                   "padding": "8px 12px",
+                   "background": "rgba(57,255,138,0.04)"}
+        )
+
+    # ── Metadata
+    try:
+        meta_df = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=None)
+        fecha_m = meta_df.iloc[5, 5] if meta_df.shape[0] > 5 and meta_df.shape[1] > 5 else "—"
+        lote_m  = meta_df.iloc[7, 2] if meta_df.shape[0] > 7 and meta_df.shape[1] > 2 else "—"
+        if isinstance(fecha_m, (int, float)):
+            fecha_m = (pd.to_datetime("1899-12-30") + pd.to_timedelta(int(fecha_m), unit="D")).strftime('%d-%m-%Y')
+        elif hasattr(fecha_m, 'strftime'):
+            fecha_m = fecha_m.strftime('%d-%m-%Y')
+        else:
+            fecha_m = str(fecha_m)
+    except Exception:
+        fecha_m = "—"
+        lote_m  = "—"
+
+    kpi_cards = html.Div([
+        html.Div([
+            html.Div(f"{tasa_sup:.1f}%".replace('.', ','), className="val"),
+            html.Div("SUPERVIVENCIA", className="lbl"),
+        ], className="summary-stat"),
+        html.Div([
+            html.Div(f"{tasa_tc:.1f}%".replace('.', ','), className="val",
+                     style={"color": "var(--accent-green)", "textShadow": "var(--glow-green)"}),
+            html.Div("TALLA COMERCIAL", className="lbl"),
+        ], className="summary-stat"),
+        html.Div([
+            html.Div(f"{int(total_maximo):,}".replace(",", "."), className="val",
+                     style={"fontSize": "1.4rem"}),
+            html.Div("MACETAS MUESTREADAS", className="lbl"),
+        ], className="summary-stat"),
+        html.Div([
+            html.Div(str(lote_m), className="val",
+                     style={"fontSize": "1rem", "letterSpacing": "0.05em"}),
+            html.Div("LOTE", className="lbl"),
+        ], className="summary-stat"),
+        html.Div([
+            html.Div(str(fecha_m), className="val",
+                     style={"fontSize": "1rem", "letterSpacing": "0.05em"}),
+            html.Div("FECHA MUESTREO", className="lbl"),
+        ], className="summary-stat"),
+    ], style={
+        "display": "flex",
+        "flexWrap": "wrap",
+        "background": "var(--bg-card)",
+        "border": "1px solid var(--border-subtle)",
+        "marginBottom": "20px",
+    })
+
+    # ── Data table
+    tabla_ui = html.Div([
+        html.Div("// DATOS CRUDOS", className="section-label", style={"marginTop": "16px"}),
         dash_table.DataTable(
-            data=filas_alerta.to_dict('records'),
-            columns=[{'name': i, 'id': i} for i in filas_alerta.columns],
-            style_table={'overflowX': 'auto', 'maxWidth': '100%'},
-            style_cell={'textAlign': 'center', 'padding': '5px', 'fontSize': '12px'},
-            style_header={'backgroundColor': 'lightgrey', 'fontWeight': 'bold'},
+            data=df.to_dict('records'),
+            columns=[{'name': i, 'id': i} for i in df.columns],
+            style_table={'overflowX': 'auto'},
+            style_cell={
+                'textAlign': 'center', 'padding': '5px',
+                'fontSize': '11px', 'fontFamily': 'Share Tech Mono, monospace',
+                'backgroundColor': 'var(--bg-panel)', 'color': 'var(--text-secondary)',
+                'border': '1px solid var(--border-subtle)'
+            },
+            style_header={
+                'backgroundColor': 'var(--bg-void)', 'fontWeight': 'bold',
+                'color': 'var(--accent-cyan)', 'border': '1px solid var(--border-glow)',
+                'letterSpacing': '0.08em', 'fontSize': '0.7rem'
+            },
             page_size=10
         )
-    ]) if not filas_alerta.empty else html.Div([
-        html.H5("✅ No se detectaron alarmas.", style={"color": "green"})
     ])
 
-    tabla = dash_table.DataTable(
-        data=df.to_dict('records'),
-        columns=[{'name': i, 'id': i} for i in df.columns],
-        style_table={'overflowX': 'auto', 'maxWidth': '100%'},
-        style_cell={'textAlign': 'center', 'padding': '5px', 'fontSize': '12px'},
-        style_header={'backgroundColor': 'lightgrey', 'fontWeight': 'bold'},
-        page_size=10
-    )
+    resumen_ui = html.Div([kpi_cards, tabla_ui])
 
     filas_unicas = df['Fila'].tolist()
 
-    def crear_grafico(col_y, titulo, color, label_y):
+    def crear_grafico(col_y, titulo, color_hex, label_y):
         if col_y not in df.columns:
-            return px.bar(title=f"{titulo} - Columna no encontrada")
-        fig = px.bar(
-            df, x='Fila', y=col_y,
-            title=titulo,
-            labels={'Fila': 'Fila', col_y: label_y},
-            color_discrete_sequence=[color]
+            return {"layout": {**PLOT_LAYOUT, "title": {"text": f"// {titulo} — no disponible"}}}
+        fig = px.bar(df, x='Fila', y=col_y,
+                     labels={'Fila': 'Fila', col_y: label_y},
+                     color_discrete_sequence=[color_hex])
+        fig.update_traces(
+            text=df[col_y], textposition='outside',
+            marker_line_color=color_hex,
+            marker_line_width=0.5,
+            marker_color=color_hex,
+            opacity=0.85,
         )
-        fig.update_traces(text=df[col_y], textposition='outside')
-        fig.update_layout(
-            xaxis=dict(tickmode='array', tickvals=filas_unicas, ticktext=filas_unicas, tickangle=-45),
-            xaxis_title="Fila", yaxis_title=label_y,
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            font=dict(size=10), margin=dict(t=60, b=80, l=50, r=50),
-            height=400
-        )
+        layout = dict(PLOT_LAYOUT)
+        layout["title"] = {"text": titulo, "font": {"family": "Rajdhani, sans-serif",
+                                                     "color": color_hex, "size": 13}}
+        layout["xaxis"] = dict(PLOT_LAYOUT["xaxis"],
+                                tickmode='array', tickvals=filas_unicas,
+                                ticktext=filas_unicas, tickangle=-45)
+        layout["yaxis"] = dict(PLOT_LAYOUT["yaxis"], title=label_y)
+        fig.update_layout(**layout)
         return fig
 
-    fig_supervivencia = crear_grafico('Sobrevivencia', f'Supervivencia: {tasa_supervivencia:.2f}%', '#1f77b4', 'Plantas Vivas')
-    fig_talla_comercial = crear_grafico('Talla Comercial', f'Talla Comercial: {tasa_talla_comercial:.2f}%', '#ff7f0e', 'Plantas en Talla Comercial')
-    fig_ejes = crear_grafico('Ejes ≥ 2', f'Ejes ≥ 2: {tasa_ejes:.2f}%', '#2ca02c', 'Plantas con Ejes ≥ 2')
-    fig_ocupacion = crear_grafico('Ocup sustrato ≥ 80%', f'Ocupación Sustrato ≥ 80%: {tasa_ocupacion:.2f}%', '#d62728', 'Plantas con Ocupación ≥ 80%')
-    fig_altura = crear_grafico('Altura ≥ 12 cm', f'Altura ≥ 12 cm: {tasa_altura:.2f}%', '#9467bd', 'Plantas con Altura ≥ 12 cm')
+    c = CHART_COLORS
+    fig_sup  = crear_grafico('Sobrevivencia',        f'Supervivencia  {tasa_sup:.1f}%',  c[0], 'Plantas vivas')
+    fig_tc   = crear_grafico('Talla Comercial',      f'Talla Comercial  {tasa_tc:.1f}%', c[1], 'Talla comercial')
+    fig_ej   = crear_grafico('Ejes ≥ 2',             f'Ejes ≥ 2  {tasa_ejes:.1f}%',      c[2], 'Con ejes ≥ 2')
+    fig_oc   = crear_grafico('Ocup sustrato ≥ 80%',  f'Ocup. Sustrato  {tasa_ocup:.1f}%',c[3], 'Ocup ≥ 80%')
+    fig_alt  = crear_grafico('Altura ≥ 12 cm',       f'Altura ≥ 12 cm  {tasa_alt:.1f}%', c[4], 'Alt ≥ 12 cm')
 
-    if '% Col' in df.columns and df['% Col'].sum() > 0:
-        fig_porcentaje_col = crear_grafico('% Col', f'% Col: {tasa_porcentaje_col:.2f}%', '#8c564b', 'Plantas con % Col')
+    if df['% Col'].sum() > 0:
+        fig_col = crear_grafico('% Col', f'% Col  {tasa_col:.1f}%', c[5], '% Col')
     else:
-        fig_porcentaje_col = px.bar(title="% Col no disponible en el archivo")
+        fig_col = {"layout": {**PLOT_LAYOUT, "title": {"text": "// % Col no disponible"}}}
 
-    # Leer metadatos (fecha y lote) desde posiciones fijas del Excel original (opcional)
-    try:
-        metadata_df = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=None)
-        fecha_muestreo = metadata_df.iloc[5, 5] if metadata_df.shape[0] > 5 and metadata_df.shape[1] > 5 else "No disponible"
-        lote = metadata_df.iloc[7, 2] if metadata_df.shape[0] > 7 and metadata_df.shape[1] > 2 else "No disponible"
-        if isinstance(fecha_muestreo, str):
-            fecha_muestreo = pd.to_datetime(fecha_muestreo, format="%d-%m-%Y", errors="raise")
-        elif isinstance(fecha_muestreo, (int, float)):
-            fecha_muestreo = pd.to_datetime("1899-12-30") + pd.to_timedelta(int(fecha_muestreo), unit="D")
-        fecha_muestreo = fecha_muestreo.strftime('%d-%m-%Y')
-    except Exception:
-        fecha_muestreo = "No disponible"
-        lote = "No disponible"
+    return html.Div(), opciones, alerta_ui, resumen_ui, fig_sup, fig_tc, fig_ej, fig_oc, fig_alt, fig_col
 
-    resumen = dbc.Container([
-        dbc.Card(
-            dbc.CardBody([
-                html.H5(f"Archivo cargado: {filename}", className="text-center text-primary mb-4"),
-                html.P(f"Hoja seleccionada: {hoja_seleccionada}", className="text-center mb-2"),
-                html.P(f"Lote maceta: {lote}", className="text-center mb-2"),
-                html.P(f"Fecha Muestreo: {fecha_muestreo}", className="text-center mb-2"),
-                html.P(f"N° macetas muestreo: {int(total_maximo):,}".replace(",", "."), className="text-center mb-2"),
-                html.P(f"% plantas vivas: {tasa_supervivencia:.2f}%".replace('.', ','), className="text-center mb-2"),
-                html.P(f"% plantas comerciales: {tasa_talla_comercial:.2f}%".replace('.', ','), className="text-center mb-2"),
-            ]),
-            className="shadow-sm bg-light p-4 mx-auto",
-            style={"maxWidth": "500px"}
-        ),
-        html.Div([
-            html.H5("Tabla de Datos", className="text-center text-primary mt-4"),
-            tabla
-        ], style={'overflowX': 'auto'})
-    ])
-
-    # Devolver el dropdown actualizado (sin cambios en opciones) y los resultados
-    opciones = [{'label': h, 'value': h} for h in hojas]
-    return html.Div("Seleccione una hoja:"), opciones, alerta, resumen, fig_supervivencia, fig_talla_comercial, fig_ejes, fig_ocupacion, fig_altura, fig_porcentaje_col
 
 # =============================================================================
 # EJECUCIÓN
