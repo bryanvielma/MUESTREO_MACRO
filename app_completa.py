@@ -33,7 +33,7 @@ if not os.path.exists(ARCHIVO_EXCEL):
 muestreos_hoy_raw = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Hoy")
 muestreos_proximos_raw = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Proximos")
 
-# Función para identificar lotes con "MN" (Perú)
+# Función para identificar lotes con "MN" (Vivero los Viñedos - Perú)
 def es_lote_peru(row):
     imc = row.get("I-M-C", "")
     return isinstance(imc, str) and "MN" in imc.upper()
@@ -47,8 +47,7 @@ if 'fecha_activadora' in muestreos_hoy_raw.columns:
 
 # IDs excluidos (con MN) SOLO de los lotes de hoy (para el mensaje)
 ids_excluidos_hoy = muestreos_hoy_raw[muestreos_hoy_raw.apply(es_lote_peru, axis=1)]["ID"].tolist()
-ids_excluidos_prox = muestreos_proximos_raw[muestreos_proximos_raw.apply(es_lote_peru, axis=1)]["ID"].tolist()
-ids_excluidos = sorted(set(ids_excluidos_hoy))  # Solo los de hoy para el mensaje
+ids_excluidos = sorted(set(ids_excluidos_hoy))
 
 # Filtrar lotes que NO contienen "MN" (los que sí se muestrean)
 def filtrar_sin_mn(df):
@@ -117,13 +116,13 @@ def render_tab(tab):
             for _, row in muestreos_proximos.iterrows()
         ] if not muestreos_proximos.empty else []
         
-        # Mensaje de exclusión (solo IDs de lotes de hoy con MN)
+        # Mensaje de exclusión con texto personalizado
         mensaje_exclusion = None
         if ids_excluidos:
             ids_texto = ", ".join(str(id_) for id_ in ids_excluidos)
             mensaje_exclusion = dbc.Alert(
                 [html.I(className="fas fa-info-circle me-2"), 
-                 f"⚠️ Los siguientes IDs corresponden a lotes en Perú (contienen 'MN') y NO se incluyen en los muestreos de hoy: {ids_texto}"],
+                 f"⚠️ Los siguientes IDs corresponden a lotes en Vivero los Viñedos (PERÚ) no se incluyen en los muestreos de hoy: {ids_texto}"],
                 color="warning",
                 dismissable=True,
                 className="mt-2"
@@ -142,13 +141,13 @@ def render_tab(tab):
                 dcc.Dropdown(
                     id="dropdown-lote-hoy",
                     options=opciones_hoy,
-                    placeholder="Seleccione un lote con muestreo hoy (sin MN)",
+                    placeholder="Seleccione un lote con muestreo hoy",
                     className="mb-3"
                 ),
                 dcc.Dropdown(
                     id="dropdown-lote",
                     options=opciones_prox,
-                    placeholder="Seleccione un lote próximo (sin MN)",
+                    placeholder="Seleccione un lote próximo",
                     className="mb-3"
                 ),
                 dbc.Button("Calcular", id="btn-calcular", color="primary", className="w-100"),
@@ -297,7 +296,30 @@ def calcular_muestra_y_generar_excel(n_clicks, codigo_hoy, codigo):
             formato_centrado = workbook.add_format({'align': 'center', 'valign': 'vcenter', 'font_size': 10, 'bold': True})
             formato_bordes_pequeno = workbook.add_format({'border': 1, 'align': 'center', 'valign': 'vcenter', 'font_size': 9})
 
-            worksheet = workbook.add_worksheet("Resumen_Muestreo")
+            # ===== NOMBRE DE LA HOJA =====
+            # Obtener el código del lote y sanitizarlo
+            codigo_lote = str(lote["Código"])
+            # Obtener los días desde "muestreo_activador" (ej. "120 Días" -> "120_Días")
+            muestreo_activador = lote.get("muestreo_activador", "")
+            if pd.notna(muestreo_activador):
+                dias_str = str(muestreo_activador).strip()
+                # Reemplazar espacios por guion bajo
+                dias_clean = re.sub(r'\s+', '_', dias_str)
+            else:
+                dias_clean = ""
+            
+            # Construir nombre base: CÓDIGO_DÍAS
+            if dias_clean:
+                nombre_hoja_base = f"{codigo_lote}_{dias_clean}"
+            else:
+                nombre_hoja_base = codigo_lote
+            
+            # Sanitizar caracteres no permitidos en nombres de hoja
+            nombre_hoja = re.sub(r'[\\/*?:\[\]]', '_', nombre_hoja_base)
+            # Limitar a 31 caracteres (máximo de Excel)
+            nombre_hoja = nombre_hoja[:31]
+            
+            worksheet = workbook.add_worksheet(nombre_hoja)
             start_row = 4
 
             info_previa = {
