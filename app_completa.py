@@ -249,20 +249,71 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet.set_row(3, 5)
 
 # =============================================================================
-# APP DASH
+# APP DASH CON MEJORAS ESTÉTICAS
 # =============================================================================
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LUX])
 server = app.server
 app.title = "MACRO - Muestreo y Supervivencia"
 
-app.layout = dbc.Container([
-    html.H1("Sistema de Gestión de Muestreos", className="text-center my-4"),
-    dcc.Tabs(id="tabs", value="tab-muestra", children=[
-        dcc.Tab(label="📊 Cálculo de Tamaño de Muestra", value="tab-muestra"),
-        dcc.Tab(label="📈 Análisis de Supervivencia", value="tab-supervivencia"),
+# Agregar Font Awesome
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>{%config%}{%scripts%}{%renderer%}</footer>
+    </body>
+</html>
+'''
+
+# Navbar
+navbar = dbc.Navbar(
+    dbc.Container([
+        html.A(
+            dbc.Row([
+                dbc.Col(html.Img(src="/assets/logo.png", height="40px") if os.path.exists(os.path.join(BASE_DIR, "assets", "logo.png")) else html.I(className="fas fa-leaf fa-2x text-white")),
+                dbc.Col(dbc.NavbarBrand("MACRO - Sistema de Gestión de Muestreos", className="ms-2 fw-bold")),
+            ], align="center", className="g-0"),
+            href="#", style={"textDecoration": "none"}
+        ),
+        dbc.NavbarToggler(id="navbar-toggler"),
+        dbc.Collapse(
+            dbc.Nav([
+                dbc.NavItem(dbc.NavLink([html.I(className="fas fa-question-circle me-1"), "Ayuda"], href="#")),
+            ], className="ms-auto"),
+            id="navbar-collapse", navbar=True
+        )
     ]),
-    html.Div(id="tab-content", className="mt-3")
-], fluid=True)
+    color="success", dark=True, className="mb-4 shadow-sm"
+)
+
+# Footer
+footer = dbc.Navbar(
+    dbc.Container([
+        html.Span("© 2025 SynergiaBio - Versión 2.0", className="text-muted"),
+        html.Span([html.I(className="fas fa-chart-line me-1"), " Monitoreo continuo"], className="text-muted ms-3")
+    ]),
+    color="light", sticky="bottom", className="mt-5 pt-3 pb-3 border-top"
+)
+
+app.layout = dbc.Container([
+    navbar,
+    dbc.Container([
+        dcc.Tabs(id="tabs", value="tab-muestra", className="mb-4", children=[
+            dcc.Tab(label=[html.I(className="fas fa-calculator me-2"), "Cálculo de Muestra"], value="tab-muestra"),
+            dcc.Tab(label=[html.I(className="fas fa-chart-line me-2"), "Análisis de Supervivencia"], value="tab-supervivencia"),
+        ]),
+        html.Div(id="tab-content", className="mt-3")
+    ], fluid=True),
+    footer
+], fluid=True, className="p-0")
 
 # =============================================================================
 # PESTAÑA 1: GENERACIÓN DE EXCEL MÚLTIPLE
@@ -277,32 +328,34 @@ def render_tab(tab):
         if ids_excluidos:
             ids_texto = ", ".join(str(id_) for id_ in ids_excluidos)
             mensaje_exclusion = dbc.Alert(
-                [html.I(className="fas fa-info-circle me-2"), 
+                [html.I(className="fas fa-exclamation-triangle me-2"), 
                  f"⚠️ Los siguientes IDs corresponden a lotes en Vivero los Viñedos (PERÚ) no se incluyen en los muestreos de hoy: {ids_texto}"],
-                color="warning", dismissable=True, className="mt-2"
+                color="warning", dismissable=True, className="shadow-sm rounded-3"
             )
         info_lotes = html.Div()
         if not muestreos_hoy.empty:
             info_lotes = dbc.Card(
                 dbc.CardBody([
-                    html.H5(f"Lotes a muestrear hoy ({len(muestreos_hoy)}):", className="card-title"),
+                    html.H5([html.I(className="fas fa-list me-2"), f"Lotes a muestrear hoy ({len(muestreos_hoy)}):"], className="card-title"),
                     html.Ul([html.Li(f"{row['Código']} - {row.get('Variedad', '')} (ID: {row['ID']})") for _, row in muestreos_hoy.iterrows()])
-                ]), className="mb-3"
+                ]), className="shadow-sm border-0 rounded-4 mb-3"
             )
         else:
-            info_lotes = dbc.Alert("No hay lotes programados para hoy (sin MN).", color="info")
+            info_lotes = dbc.Alert("No hay lotes programados para hoy (sin MN).", color="info", className="shadow-sm rounded-3")
         
         return dbc.Row([
             dbc.Col([
                 mensaje_exclusion if mensaje_exclusion else html.Div(),
                 info_lotes,
-                dbc.Button("Generar Excel de muestreo hoy", id="btn-generar-multiple", color="primary", className="w-100 mb-3"),
-                html.A("Descargar Excel", id="btn-descargar-multiple", href="", download="", className="btn btn-success w-100"),
+                dbc.Button([html.I(className="fas fa-file-excel me-2"), "Generar Excel de muestreo hoy"], 
+                           id="btn-generar-multiple", color="success", className="w-100 mb-3 shadow-sm rounded-3 py-2"),
+                html.A([html.I(className="fas fa-download me-2"), "Descargar Excel"], 
+                       id="btn-descargar-multiple", href="", download="", className="btn btn-primary w-100 mb-3 shadow-sm rounded-3 py-2"),
                 dbc.Card([
-                    dbc.CardHeader("Resultado de la generación"),
+                    dbc.CardHeader([html.I(className="fas fa-info-circle me-2"), "Resultado de la generación"], className="bg-primary text-white fw-bold"),
                     dbc.CardBody(html.Div(id="resultado-multiple"))
-                ], className="mt-4"),
-            ], width=12)
+                ], className="shadow-lg border-0 rounded-4 mt-2"),
+            ], width=12, lg=8, className="mx-auto")
         ])
     else:
         # Pestaña 2: Análisis de Supervivencia con selector de hoja
@@ -312,32 +365,35 @@ def render_tab(tab):
                     dcc.Upload(
                         id='upload-data',
                         children=html.Div([
-                            'Arrastra y suelta o ',
-                            html.A('Selecciona un archivo Excel')
-                        ]),
+                            html.I(className="fas fa-cloud-upload-alt fa-2x mb-2", style={"color": "#6c757d"}),
+                            html.P("Arrastra y suelta o ", className="mb-0"),
+                            html.A("Selecciona un archivo Excel", className="fw-bold")
+                        ], style={"textAlign": "center"}),
                         style={
-                            'width': '100%', 'height': '60px', 'lineHeight': '60px',
-                            'borderWidth': '1px', 'borderStyle': 'dashed', 'borderRadius': '5px',
-                            'textAlign': 'center', 'margin': '10px'
+                            'width': '100%', 'height': '120px', 'lineHeight': '1.5',
+                            'borderWidth': '2px', 'borderStyle': 'dashed', 'borderRadius': '15px',
+                            'borderColor': '#20c997', 'backgroundColor': '#f8f9fa',
+                            'textAlign': 'center', 'margin': '10px', 'padding': '20px'
                         },
                         multiple=False
                     ),
                     html.Div(id='selector-hoja-wrapper', style={'marginTop': '20px'}),
-                    dcc.Dropdown(id='selector-hoja', placeholder="Seleccione una hoja...", style={'marginBottom': '20px'}),
+                    dcc.Dropdown(id='selector-hoja', placeholder="Seleccione una hoja...", 
+                                 className="mb-3 shadow-sm rounded-3", style={'borderRadius': '10px'}),
                     html.Div(id='output-alertas', style={'marginTop': '20px'}),
                     html.Div(id='output-data-upload', style={'marginTop': '20px'}),
-                ], width=12)
+                ], width=12, lg=10, className="mx-auto")
             ]),
             dbc.Row([
-                dbc.Col(dcc.Graph(id="grafico-supervivencia", config={'displayModeBar': False}), width=4, style={'height': '450px'}),
-                dbc.Col(dcc.Graph(id="grafico-talla-comercial", config={'displayModeBar': False}), width=4, style={'height': '450px'}),
-                dbc.Col(dcc.Graph(id="grafico-ejes", config={'displayModeBar': False}), width=4, style={'height': '450px'}),
-            ], className="mt-3", style={'marginBottom': '20px'}),
+                dbc.Col(dcc.Graph(id="grafico-supervivencia", config={'displayModeBar': False}), width=12, lg=4, className="mb-3"),
+                dbc.Col(dcc.Graph(id="grafico-talla-comercial", config={'displayModeBar': False}), width=12, lg=4, className="mb-3"),
+                dbc.Col(dcc.Graph(id="grafico-ejes", config={'displayModeBar': False}), width=12, lg=4, className="mb-3"),
+            ], className="g-3"),
             dbc.Row([
-                dbc.Col(dcc.Graph(id="grafico-ocupacion", config={'displayModeBar': False}), width=4, style={'height': '450px'}),
-                dbc.Col(dcc.Graph(id="grafico-altura", config={'displayModeBar': False}), width=4, style={'height': '450px'}),
-                dbc.Col(dcc.Graph(id="grafico-porcentaje-col", config={'displayModeBar': False}), width=4, style={'height': '450px'}),
-            ], className="mt-3", style={'marginBottom': '30px'}),
+                dbc.Col(dcc.Graph(id="grafico-ocupacion", config={'displayModeBar': False}), width=12, lg=4, className="mb-3"),
+                dbc.Col(dcc.Graph(id="grafico-altura", config={'displayModeBar': False}), width=12, lg=4, className="mb-3"),
+                dbc.Col(dcc.Graph(id="grafico-porcentaje-col", config={'displayModeBar': False}), width=12, lg=4, className="mb-3"),
+            ], className="g-3"),
         ], fluid=True)
 
 # =============================================================================
@@ -386,11 +442,11 @@ def generar_excel_multiple(n_clicks):
     href = f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{excel_data}"
     
     resultado = html.Div([
-        html.P(f"✅ Excel generado correctamente con {len(lotes_procesados)} hoja(s)."),
-        html.P(f"Lotes incluidos: {', '.join(lotes_procesados)}"),
+        html.P([html.I(className="fas fa-check-circle text-success me-2"), f"✅ Excel generado correctamente con {len(lotes_procesados)} hoja(s)."]),
+        html.P([html.I(className="fas fa-tag me-2"), f"Lotes incluidos: {', '.join(lotes_procesados)}"]),
     ])
     if errores:
-        resultado.children.append(html.P(f"❌ Errores en: {', '.join(errores)}", style={"color": "red"}))
+        resultado.children.append(html.P([html.I(className="fas fa-exclamation-triangle text-danger me-2"), f"❌ Errores en: {', '.join(errores)}"], style={"color": "red"}))
     return href, nombre_excel, resultado
 
 # =============================================================================
@@ -431,19 +487,19 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
     # Si no hay hoja seleccionada, mostrar el dropdown y salir (sin análisis)
     if hoja_seleccionada is None:
         opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Seleccione una hoja:"), opciones, None, None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, None, None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
     # Verificar que la hoja seleccionada exista
     if hoja_seleccionada not in hojas:
         opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Hoja no encontrada, seleccione otra:"), opciones, html.Div(["Hoja no válida"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, html.Div(["Hoja no válida"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
     # Leer la hoja seleccionada sin asumir header
     try:
         df_raw = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=None)
     except Exception as e:
         opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Error al leer la hoja:"), opciones, html.Div([f"Error: {str(e)}"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, html.Div([f"Error al leer la hoja: {str(e)}"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
     # Buscar la fila donde aparece "Fila" (encabezado de la tabla)
     header_row_idx = None
@@ -454,7 +510,7 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
 
     if header_row_idx is None:
         opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Seleccione otra hoja:"), opciones, html.Div(["No se encontró la fila de encabezado 'Fila' en esta hoja."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, html.Div(["No se encontró la fila de encabezado 'Fila' en esta hoja."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
     # Leer los datos a partir de la fila siguiente al encabezado
     df = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=header_row_idx)
@@ -467,7 +523,7 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
 
     if df.empty:
         opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Seleccione otra hoja:"), opciones, html.Div(["No se encontraron filas de datos numéricos en la tabla."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, html.Div(["No se encontraron filas de datos numéricos en la tabla."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
     # Convertir columnas numéricas
     columnas_numericas = ['Máximo', 'Sobrevivencia', 'Talla Comercial', 'Ejes ≥ 2',
@@ -489,12 +545,12 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
 
     if 'Máximo' not in df.columns:
         opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Seleccione otra hoja:"), opciones, html.Div(["Columna 'Máximo' no encontrada."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, html.Div(["Columna 'Máximo' no encontrada."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
     total_maximo = df['Máximo'].sum()
     if total_maximo == 0:
         opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div("Seleccione otra hoja:"), opciones, html.Div(["El total de 'Máximo' es cero, no se puede calcular porcentajes."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, html.Div(["El total de 'Máximo' es cero, no se puede calcular porcentajes."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
     # Cálculo de tasas
     total_sobrevivencia = df['Sobrevivencia'].sum()
@@ -528,18 +584,19 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
     filas_alerta = df[condiciones]
 
     alerta = html.Div([
-        html.H5("⚠️ Alarmas detectadas:", style={"color": "red"}),
+        html.H5([html.I(className="fas fa-bell text-warning me-2"), "Alarmas detectadas:"], style={"color": "#dc3545"}),
         html.P(f"Se encontraron {len(filas_alerta)} filas con valores fuera de rango."),
         dash_table.DataTable(
             data=filas_alerta.to_dict('records'),
             columns=[{'name': i, 'id': i} for i in filas_alerta.columns],
             style_table={'overflowX': 'auto', 'maxWidth': '100%'},
             style_cell={'textAlign': 'center', 'padding': '5px', 'fontSize': '12px'},
-            style_header={'backgroundColor': 'lightgrey', 'fontWeight': 'bold'},
-            page_size=10
+            style_header={'backgroundColor': '#20c997', 'fontWeight': 'bold', 'color': 'white'},
+            page_size=10,
+            className="shadow-sm rounded-3"
         )
     ]) if not filas_alerta.empty else html.Div([
-        html.H5("✅ No se detectaron alarmas.", style={"color": "green"})
+        html.H5([html.I(className="fas fa-check-circle text-success me-2"), "No se detectaron alarmas."], style={"color": "#198754"})
     ])
 
     tabla = dash_table.DataTable(
@@ -547,8 +604,9 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
         columns=[{'name': i, 'id': i} for i in df.columns],
         style_table={'overflowX': 'auto', 'maxWidth': '100%'},
         style_cell={'textAlign': 'center', 'padding': '5px', 'fontSize': '12px'},
-        style_header={'backgroundColor': 'lightgrey', 'fontWeight': 'bold'},
-        page_size=10
+        style_header={'backgroundColor': '#20c997', 'fontWeight': 'bold', 'color': 'white'},
+        page_size=10,
+        className="shadow-sm rounded-3"
     )
 
     filas_unicas = df['Fila'].tolist()
@@ -560,19 +618,22 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
             df, x='Fila', y=col_y,
             title=titulo,
             labels={'Fila': 'Fila', col_y: label_y},
-            color_discrete_sequence=[color]
+            color_discrete_sequence=[color],
+            template="plotly_white"
         )
-        fig.update_traces(text=df[col_y], textposition='outside')
+        fig.update_traces(text=df[col_y], textposition='outside', marker_line_color='rgba(0,0,0,0.2)', marker_line_width=1)
         fig.update_layout(
             xaxis=dict(tickmode='array', tickvals=filas_unicas, ticktext=filas_unicas, tickangle=-45),
             xaxis_title="Fila", yaxis_title=label_y,
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             font=dict(size=10), margin=dict(t=60, b=80, l=50, r=50),
-            height=400
+            height=400,
+            title_font_size=14,
+            title_x=0.5
         )
         return fig
 
-    fig_supervivencia = crear_grafico('Sobrevivencia', f'Supervivencia: {tasa_supervivencia:.2f}%', '#1f77b4', 'Plantas Vivas')
+    fig_supervivencia = crear_grafico('Sobrevivencia', f'Supervivencia: {tasa_supervivencia:.2f}%', '#2c7fb8', 'Plantas Vivas')
     fig_talla_comercial = crear_grafico('Talla Comercial', f'Talla Comercial: {tasa_talla_comercial:.2f}%', '#ff7f0e', 'Plantas en Talla Comercial')
     fig_ejes = crear_grafico('Ejes ≥ 2', f'Ejes ≥ 2: {tasa_ejes:.2f}%', '#2ca02c', 'Plantas con Ejes ≥ 2')
     fig_ocupacion = crear_grafico('Ocup sustrato ≥ 80%', f'Ocupación Sustrato ≥ 80%: {tasa_ocupacion:.2f}%', '#d62728', 'Plantas con Ocupación ≥ 80%')
@@ -581,7 +642,7 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
     if '% Col' in df.columns and df['% Col'].sum() > 0:
         fig_porcentaje_col = crear_grafico('% Col', f'% Col: {tasa_porcentaje_col:.2f}%', '#8c564b', 'Plantas con % Col')
     else:
-        fig_porcentaje_col = px.bar(title="% Col no disponible en el archivo")
+        fig_porcentaje_col = px.bar(title="% Col no disponible en el archivo", template="plotly_white")
 
     # Leer metadatos (fecha y lote) desde posiciones fijas del Excel original (opcional)
     try:
@@ -600,26 +661,26 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
     resumen = dbc.Container([
         dbc.Card(
             dbc.CardBody([
-                html.H5(f"Archivo cargado: {filename}", className="text-center text-primary mb-4"),
-                html.P(f"Hoja seleccionada: {hoja_seleccionada}", className="text-center mb-2"),
-                html.P(f"Lote maceta: {lote}", className="text-center mb-2"),
-                html.P(f"Fecha Muestreo: {fecha_muestreo}", className="text-center mb-2"),
-                html.P(f"N° macetas muestreo: {int(total_maximo):,}".replace(",", "."), className="text-center mb-2"),
-                html.P(f"% plantas vivas: {tasa_supervivencia:.2f}%".replace('.', ','), className="text-center mb-2"),
-                html.P(f"% plantas comerciales: {tasa_talla_comercial:.2f}%".replace('.', ','), className="text-center mb-2"),
+                html.H5([html.I(className="fas fa-file-excel me-2"), f"Archivo cargado: {filename}"], className="text-center text-primary mb-4"),
+                html.P([html.I(className="fas fa-table me-2"), f"Hoja seleccionada: {hoja_seleccionada}"], className="text-center mb-2"),
+                html.P([html.I(className="fas fa-tag me-2"), f"Lote maceta: {lote}"], className="text-center mb-2"),
+                html.P([html.I(className="fas fa-calendar-alt me-2"), f"Fecha Muestreo: {fecha_muestreo}"], className="text-center mb-2"),
+                html.P([html.I(className="fas fa-seedling me-2"), f"N° macetas muestreo: {int(total_maximo):,}".replace(",", ".")], className="text-center mb-2"),
+                html.P([html.I(className="fas fa-heartbeat me-2"), f"% plantas vivas: {tasa_supervivencia:.2f}%".replace('.', ',')], className="text-center mb-2"),
+                html.P([html.I(className="fas fa-chart-simple me-2"), f"% plantas comerciales: {tasa_talla_comercial:.2f}%".replace('.', ',')], className="text-center mb-2"),
             ]),
-            className="shadow-sm bg-light p-4 mx-auto",
-            style={"maxWidth": "500px"}
+            className="shadow-lg border-0 rounded-4 bg-light mx-auto",
+            style={"maxWidth": "550px"}
         ),
         html.Div([
-            html.H5("Tabla de Datos", className="text-center text-primary mt-4"),
+            html.H5([html.I(className="fas fa-table-list me-2"), "Tabla de Datos"], className="text-center text-primary mt-5 mb-3"),
             tabla
         ], style={'overflowX': 'auto'})
     ])
 
-    # Devolver el dropdown actualizado (sin cambios en opciones) y los resultados
+    # Devolver el dropdown actualizado y los resultados
     opciones = [{'label': h, 'value': h} for h in hojas]
-    return html.Div("Seleccione una hoja:"), opciones, alerta, resumen, fig_supervivencia, fig_talla_comercial, fig_ejes, fig_ocupacion, fig_altura, fig_porcentaje_col
+    return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, alerta, resumen, fig_supervivencia, fig_talla_comercial, fig_ejes, fig_ocupacion, fig_altura, fig_porcentaje_col
 
 # =============================================================================
 # EJECUCIÓN
