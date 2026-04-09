@@ -37,7 +37,6 @@ def es_lote_peru(row):
     imc = row.get("I-M-C", "")
     return isinstance(imc, str) and "MN" in imc.upper()
 
-# Filtrar por fecha actual (solo para hoy)
 hoy_date = datetime.now().date()
 if 'fecha_activadora' in muestreos_hoy_raw.columns:
     muestreos_hoy_raw['fecha_activadora'] = pd.to_datetime(muestreos_hoy_raw['fecha_activadora'], errors='coerce')
@@ -249,7 +248,7 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet.set_row(3, 5)
 
 # =============================================================================
-# APP DASH CON MEJORAS ESTÉTICAS PROFESIONALES
+# APP DASH CON PESTAÑAS CORREGIDAS
 # =============================================================================
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 server = app.server
@@ -267,21 +266,28 @@ app.index_string = '''
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
         <style>
-            body {
-                font-family: 'Inter', sans-serif;
-                background-color: #f4f6f9;
-            }
-            /* Estilo para las pestañas */
+            body { font-family: 'Inter', sans-serif; background-color: #f4f6f9; }
+            /* Contenedor principal de las pestañas */
             .custom-tabs {
                 border-bottom: 2px solid #20c997;
+                margin-bottom: 10px;
             }
+            /* Estilo de cada pestaña */
             .custom-tab {
                 background-color: #f8f9fa;
                 border-radius: 10px 10px 0 0 !important;
                 padding: 10px 20px !important;
                 font-weight: 500;
                 transition: all 0.2s;
+                border: none;
+                margin-right: 5px;
+                color: #495057;
             }
+            .custom-tab:hover {
+                background-color: #e9ecef;
+                cursor: pointer;
+            }
+            /* Pestaña seleccionada */
             .custom-tab--selected {
                 background-color: #20c997 !important;
                 color: white !important;
@@ -305,19 +311,18 @@ app.index_string = '''
                 background: linear-gradient(135deg, #0b5ed7, #0a58ca);
                 transform: scale(1.02);
             }
-            /* Tarjeta con borde superior colorido */
+            /* Tarjeta con borde superior */
             .card-accent {
                 border-top: 4px solid #20c997 !important;
                 border-radius: 12px !important;
             }
-            /* Área de contenido de pestañas */
+            /* Contenido de las pestañas */
             .tab-content {
                 background-color: white;
                 border-radius: 0 0 15px 15px;
                 padding: 20px;
                 box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
             }
-            /* Efecto hover en tarjetas */
             .card-hover {
                 transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             }
@@ -325,7 +330,6 @@ app.index_string = '''
                 transform: translateY(-5px);
                 box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important;
             }
-            /* Mejora en el área de upload */
             .upload-area {
                 transition: all 0.2s;
             }
@@ -333,7 +337,6 @@ app.index_string = '''
                 background-color: #e9ecef !important;
                 border-color: #1aa179 !important;
             }
-            /* Footer */
             .footer {
                 font-size: 0.85rem;
             }
@@ -346,7 +349,7 @@ app.index_string = '''
 </html>
 '''
 
-# Navbar superior (sutil)
+# Navbar
 navbar = dbc.Navbar(
     dbc.Container([
         html.A(
@@ -386,18 +389,33 @@ app.layout = dbc.Container([
     navbar,
     html.H1([html.I(className="fas fa-chart-line me-2"), "Sistema de Gestión de Muestreos"], 
             className="text-center my-3 text-primary"),
-    dcc.Tabs(id="tabs", value="tab-muestra", className="custom-tabs", children=[
-        dcc.Tab(label=[html.I(className="fas fa-calculator me-2"), "Cálculo de Tamaño de Muestra"], 
-                value="tab-muestra", className="custom-tab"),
-        dcc.Tab(label=[html.I(className="fas fa-chart-line me-2"), "Análisis de Supervivencia"], 
-                value="tab-supervivencia", className="custom-tab"),
-    ]),
-    html.Div(id="tab-content", className="mt-0"),
+    # PESTAÑAS CORREGIDAS
+    dcc.Tabs(
+        id="tabs",
+        value="tab-muestra",
+        parent_className="custom-tabs",   # ← CRUCIAL: el contenedor externo
+        className="mb-3",                 # margen inferior
+        children=[
+            dcc.Tab(
+                label="📊 Cálculo de Tamaño de Muestra",
+                value="tab-muestra",
+                className="custom-tab",
+                selected_className="custom-tab--selected"
+            ),
+            dcc.Tab(
+                label="📈 Análisis de Supervivencia",
+                value="tab-supervivencia",
+                className="custom-tab",
+                selected_className="custom-tab--selected"
+            ),
+        ]
+    ),
+    html.Div(id="tab-content", className="tab-content"),  # aquí se carga el contenido dinámico
     footer
 ], fluid=True)
 
 # =============================================================================
-# PESTAÑA 1: GENERACIÓN DE EXCEL MÚLTIPLE (MEJORADA)
+# CALLBACK PARA RENDERIZAR EL CONTENIDO DE CADA PESTAÑA
 # =============================================================================
 @app.callback(
     Output("tab-content", "children"),
@@ -450,8 +468,8 @@ def render_tab(tab):
                 ], className="shadow-lg border-0 rounded-4 mt-2 card-accent"),
             ], width=12, lg=8, className="mx-auto")
         ])
-    else:
-        # Pestaña 2: Análisis de Supervivencia
+    
+    else:  # tab-supervivencia
         return dbc.Container([
             dbc.Row([
                 dbc.Col([
@@ -555,7 +573,7 @@ def generar_excel_multiple(n_clicks):
     return href, nombre_excel, resultado
 
 # =============================================================================
-# CALLBACK PARA SUPERVIVENCIA (CON SELECCIÓN DE HOJA)
+# CALLBACK PARA SUPERVIVENCIA (SIN CAMBIOS)
 # =============================================================================
 @app.callback(
     [Output('selector-hoja-wrapper', 'children'),
