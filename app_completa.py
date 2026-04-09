@@ -16,7 +16,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # =============================================================================
-# CONFIGURACIÓN DE RUTAS (para la pestaña 1)
+# CONFIGURACIÓN DE RUTAS
 # =============================================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
@@ -25,7 +25,7 @@ ARCHIVO_EXCEL = os.path.join(OUTPUT_DIR, "Muestreos_Activos.xlsx")
 IMAGEN_RECORTADA = os.path.join(IMAGES_DIR, "imagen_recortada.jpg")
 
 # =============================================================================
-# CARGA DE DATOS Y FILTRO DE LOTES CON "MN" (Perú)
+# CARGA Y FILTRADO DE DATOS
 # =============================================================================
 if not os.path.exists(ARCHIVO_EXCEL):
     raise FileNotFoundError(f"No se encontró {ARCHIVO_EXCEL}. Asegúrate de subir el archivo.")
@@ -38,10 +38,17 @@ def es_lote_peru(row):
     imc = row.get("I-M-C", "")
     return isinstance(imc, str) and "MN" in imc.upper()
 
-# Obtener IDs de lotes excluidos (Perú)
+# Filtrar por fecha actual (solo para la pestaña "Hoy")
+hoy_date = datetime.now().date()
+if 'fecha_activadora' in muestreos_hoy_raw.columns:
+    muestreos_hoy_raw['fecha_activadora'] = pd.to_datetime(muestreos_hoy_raw['fecha_activadora'], errors='coerce')
+    mascara_fecha = muestreos_hoy_raw['fecha_activadora'].dt.date == hoy_date
+    muestreos_hoy_raw = muestreos_hoy_raw[mascara_fecha].copy()
+
+# IDs excluidos (con MN) SOLO de los lotes de hoy (para el mensaje)
 ids_excluidos_hoy = muestreos_hoy_raw[muestreos_hoy_raw.apply(es_lote_peru, axis=1)]["ID"].tolist()
 ids_excluidos_prox = muestreos_proximos_raw[muestreos_proximos_raw.apply(es_lote_peru, axis=1)]["ID"].tolist()
-ids_excluidos = sorted(set(ids_excluidos_hoy + ids_excluidos_prox))
+ids_excluidos = sorted(set(ids_excluidos_hoy))  # Solo los de hoy para el mensaje
 
 # Filtrar lotes que NO contienen "MN" (los que sí se muestrean)
 def filtrar_sin_mn(df):
@@ -53,7 +60,7 @@ def filtrar_sin_mn(df):
 muestreos_hoy = filtrar_sin_mn(muestreos_hoy_raw)
 muestreos_proximos = filtrar_sin_mn(muestreos_proximos_raw)
 
-# Convertir columnas numéricas y fechas
+# Convertir columnas numéricas
 for df in [muestreos_hoy, muestreos_proximos]:
     for col in ['Macetas actuales', 'Alveolos', 'Bandeja']:
         if col in df.columns:
@@ -62,7 +69,7 @@ for df in [muestreos_hoy, muestreos_proximos]:
         df['fecha_activadora'] = pd.to_datetime(df['fecha_activadora'], errors='coerce')
 
 # =============================================================================
-# FUNCIÓN PARA EXTRAER CANTIDAD DESDE I-M-C (pestaña 1)
+# FUNCIÓN PARA EXTRAER CANTIDAD DESDE I-M-C
 # =============================================================================
 def extraer_cantidad_desde_imc(imc_str):
     if not isinstance(imc_str, str):
@@ -77,7 +84,7 @@ def extraer_cantidad_desde_imc(imc_str):
 # APP DASH UNIFICADA
 # =============================================================================
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
-server = app.server   # 👈 Necesario para Render
+server = app.server
 app.title = "MACRO - Muestreo y Supervivencia"
 
 app.layout = dbc.Container([
@@ -98,30 +105,31 @@ app.layout = dbc.Container([
 )
 def render_tab(tab):
     if tab == "tab-muestra":
-        # Crear opciones de dropdown solo con lotes filtrados
+        # Opciones solo con lotes de HOY (sin MN y con fecha_activadora = hoy)
         opciones_hoy = [
             {"label": f"{row['Código']} - {row.get('Variedad', '')}", "value": row["Código"]}
             for _, row in muestreos_hoy.iterrows()
         ] if not muestreos_hoy.empty else []
         
+        # Opciones para próximos (sin filtrar por fecha, pero sin MN)
         opciones_prox = [
             {"label": f"{row['Código']} - {row.get('Variedad', '')}", "value": row["Código"]}
             for _, row in muestreos_proximos.iterrows()
         ] if not muestreos_proximos.empty else []
         
-        # Crear mensaje de exclusión (Perú)
+        # Mensaje de exclusión (solo IDs de lotes de hoy con MN)
         mensaje_exclusion = None
         if ids_excluidos:
             ids_texto = ", ".join(str(id_) for id_ in ids_excluidos)
             mensaje_exclusion = dbc.Alert(
                 [html.I(className="fas fa-info-circle me-2"), 
-                 f"⚠️ Los siguientes IDs corresponden a lotes en Perú (contienen 'MN') y NO se incluyen en los muestreos: {ids_texto}"],
+                 f"⚠️ Los siguientes IDs corresponden a lotes en Perú (contienen 'MN') y NO se incluyen en los muestreos de hoy: {ids_texto}"],
                 color="warning",
                 dismissable=True,
                 className="mt-2"
             )
         
-        # Si no hay lotes disponibles, mostrar mensaje de advertencia
+        # Si no hay lotes disponibles, mostrar advertencia
         if not opciones_hoy and not opciones_prox:
             return dbc.Row(dbc.Col([
                 mensaje_exclusion if mensaje_exclusion else html.Div(),
@@ -205,14 +213,12 @@ def calcular_muestra_y_generar_excel(n_clicks, codigo_hoy, codigo):
     else:
         df_origen = muestreos_proximos
 
-    # Verificar que el código exista en el dataframe filtrado
     if codigo not in df_origen["Código"].values:
         return "Error: El lote seleccionado no está disponible (posiblemente contiene 'MN' y fue filtrado).", "", ""
 
     try:
         lote = df_origen[df_origen["Código"] == codigo].iloc[0]
 
-        # Extraer cantidad desde I-M-C
         imc_raw = lote.get("I-M-C", "")
         if pd.isna(imc_raw):
             imc_raw = ""
@@ -228,7 +234,6 @@ def calcular_muestra_y_generar_excel(n_clicks, codigo_hoy, codigo):
 
         imc_val = imc_raw
 
-        # Bandejas y volumen
         bandejas_val = lote.get("Bandeja", 0)
         if pd.isna(bandejas_val):
             bandejas_val = 0
@@ -397,7 +402,7 @@ def calcular_muestra_y_generar_excel(n_clicks, codigo_hoy, codigo):
         href = f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{excel_data}"
         download_name = f'MACRO_{lote["Código"]}_{lote["muestreo_activador"]}_{lote["fecha_activadora"].strftime("%d-%m-%Y")}.xlsx'
 
-        # --- Resultados en texto ---
+        # Resultados en texto
         resultados = [
             html.P(f"ID del Lote: {lote.get('ID', 'N/A')}"),
             html.P(f"Fecha Inicial: {lote.get('Fecha', '').strftime('%d-%m-%Y') if pd.notnull(lote.get('Fecha')) else 'N/A'}"),
@@ -447,7 +452,6 @@ def procesar_archivo(contents, filename):
     decoded = base64.b64decode(content_string)
 
     try:
-        # Leer todo el archivo sin asumir header
         df_raw = pd.read_excel(BytesIO(decoded), header=None)
         
         # Buscar la fila donde aparece "Fila" (encabezado de la tabla)
@@ -460,20 +464,17 @@ def procesar_archivo(contents, filename):
         if header_row_idx is None:
             return html.Div(["No se encontró la fila de encabezado 'Fila' en el archivo."]), None, {}, {}, {}, {}, {}, {}
         
-        # Leer los datos a partir de la fila siguiente al encabezado
         df = pd.read_excel(BytesIO(decoded), header=header_row_idx)
         
-        # Limpiar: eliminar filas donde 'Fila' no sea numérico (texto como "Responsable", etc.)
+        # Limpiar: eliminar filas donde 'Fila' no sea numérico
         df['Fila_temp'] = df['Fila'].astype(str).str.strip()
         mask_fila_valida = df['Fila_temp'].str.match(r'^\d+(\.\d+)?$', na=False)
         df = df[mask_fila_valida].copy()
         df.drop(columns=['Fila_temp'], inplace=True)
         
-        # Si después del filtro no hay filas, error
         if df.empty:
             return html.Div(["No se encontraron filas de datos numéricos en la tabla."]), None, {}, {}, {}, {}, {}, {}
         
-        # Convertir columnas numéricas
         columnas_numericas = ['Máximo', 'Sobrevivencia', 'Talla Comercial', 'Ejes ≥ 2',
                               'Ocup sustrato ≥ 80%', 'Altura ≥ 12 cm']
         for col in columnas_numericas:
@@ -482,7 +483,6 @@ def procesar_archivo(contents, filename):
             else:
                 df[col] = 0
         
-        # % Col puede no existir
         if '% Col' in df.columns:
             df['% Col'] = pd.to_numeric(df['% Col'], errors='coerce')
             columnas_numericas.append('% Col')
@@ -490,11 +490,8 @@ def procesar_archivo(contents, filename):
             df['% Col'] = 0
         
         df[columnas_numericas] = df[columnas_numericas].fillna(0)
-        
-        # Asegurar que 'Fila' sea entero y luego string para el eje X
         df['Fila'] = pd.to_numeric(df['Fila'], errors='coerce').fillna(0).astype(int).astype(str)
         
-        # Verificar que existe 'Máximo' y total > 0
         if 'Máximo' not in df.columns:
             return html.Div(["Columna 'Máximo' no encontrada."]), None, {}, {}, {}, {}, {}, {}
         
@@ -502,7 +499,6 @@ def procesar_archivo(contents, filename):
         if total_maximo == 0:
             return html.Div(["El total de 'Máximo' es cero, no se puede calcular porcentajes."]), None, {}, {}, {}, {}, {}, {}
         
-        # Cálculo de tasas
         total_sobrevivencia = df['Sobrevivencia'].sum()
         tasa_supervivencia = (total_sobrevivencia / total_maximo) * 100
         total_talla_comercial = df['Talla Comercial'].sum()
@@ -520,7 +516,6 @@ def procesar_archivo(contents, filename):
         else:
             tasa_porcentaje_col = 0
         
-        # Alarmas
         condiciones = (
             (df['Sobrevivencia'] > df['Máximo']) |
             (df['Talla Comercial'] > df['Máximo']) |
