@@ -249,9 +249,9 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet.set_row(3, 5)
 
 # =============================================================================
-# APP DASH CON MEJORAS ESTÉTICAS
+# APP DASH CON MEJORAS ESTÉTICAS (TEMA FLATLY, ESTABLE)
 # =============================================================================
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LUX])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 server = app.server
 app.title = "MACRO - Muestreo y Supervivencia"
 
@@ -305,13 +305,11 @@ footer = dbc.Navbar(
 
 app.layout = dbc.Container([
     navbar,
-    dbc.Container([
-        dcc.Tabs(id="tabs", value="tab-muestra", className="mb-4", children=[
-            dcc.Tab(label=[html.I(className="fas fa-calculator me-2"), "Cálculo de Muestra"], value="tab-muestra"),
-            dcc.Tab(label=[html.I(className="fas fa-chart-line me-2"), "Análisis de Supervivencia"], value="tab-supervivencia"),
-        ]),
-        html.Div(id="tab-content", className="mt-3")
-    ], fluid=True),
+    dcc.Tabs(id="tabs", value="tab-muestra", className="mb-4", children=[
+        dcc.Tab(label=[html.I(className="fas fa-calculator me-2"), "Cálculo de Muestra"], value="tab-muestra"),
+        dcc.Tab(label=[html.I(className="fas fa-chart-line me-2"), "Análisis de Supervivencia"], value="tab-supervivencia"),
+    ]),
+    html.Div(id="tab-content", className="mt-3"),
     footer
 ], fluid=True, className="p-0")
 
@@ -323,6 +321,7 @@ app.layout = dbc.Container([
     Input("tabs", "value")
 )
 def render_tab(tab):
+    print(f"DEBUG: Pestaña seleccionada -> {tab}")   # <-- depuración
     if tab == "tab-muestra":
         mensaje_exclusion = None
         if ids_excluidos:
