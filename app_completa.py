@@ -249,13 +249,13 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet.set_row(3, 5)
 
 # =============================================================================
-# APP DASH CON MEJORAS ESTÉTICAS (PERO CONSERVANDO ESTRUCTURA FUNCIONAL)
+# APP DASH (VERSIÓN FUNCIONAL CON MEJORAS VISUALES MÍNIMAS)
 # =============================================================================
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 server = app.server
 app.title = "MACRO - Muestreo y Supervivencia"
 
-# Agregar Font Awesome (opcional, para iconos)
+# Agregar Font Awesome para iconos
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -273,44 +273,17 @@ app.index_string = '''
 </html>
 '''
 
-# Navbar simple (sin interferir con el layout de pestañas)
-navbar = dbc.Navbar(
-    dbc.Container([
-        html.A(
-            dbc.Row([
-                dbc.Col(html.I(className="fas fa-leaf fa-2x text-white")),
-                dbc.Col(dbc.NavbarBrand("MACRO - Sistema de Gestión de Muestreos", className="ms-2 fw-bold")),
-            ], align="center", className="g-0"),
-            href="#", style={"textDecoration": "none"}
-        ),
-    ]),
-    color="success", dark=True, className="mb-4 shadow-sm"
-)
-
-# Footer simple
-footer = html.Footer(
-    dbc.Container([
-        html.Hr(),
-        html.P("© 2025 SynergiaBio - Versión 2.0", className="text-center text-muted"),
-        html.P([html.I(className="fas fa-chart-line me-1"), " Monitoreo continuo"], className="text-center text-muted")
-    ]),
-    className="mt-5"
-)
-
-# Layout principal (estructura probada que funciona)
 app.layout = dbc.Container([
-    navbar,
-    html.H1("Sistema de Gestión de Muestreos", className="text-center my-4"),
+    html.H1([html.I(className="fas fa-chart-line me-2"), "Sistema de Gestión de Muestreos"], className="text-center my-4 text-primary"),
     dcc.Tabs(id="tabs", value="tab-muestra", children=[
         dcc.Tab(label=[html.I(className="fas fa-calculator me-2"), "Cálculo de Tamaño de Muestra"], value="tab-muestra"),
         dcc.Tab(label=[html.I(className="fas fa-chart-line me-2"), "Análisis de Supervivencia"], value="tab-supervivencia"),
     ]),
-    html.Div(id="tab-content", className="mt-3"),
-    footer
+    html.Div(id="tab-content", className="mt-3")
 ], fluid=True)
 
 # =============================================================================
-# PESTAÑA 1: GENERACIÓN DE EXCEL MÚLTIPLE (CON MEJORAS VISUALES)
+# PESTAÑA 1: GENERACIÓN DE EXCEL MÚLTIPLE (MEJORADA VISUALMENTE)
 # =============================================================================
 @app.callback(
     Output("tab-content", "children"),
@@ -352,7 +325,7 @@ def render_tab(tab):
             ], width=12, lg=8, className="mx-auto")
         ])
     else:
-        # Pestaña 2: Análisis de Supervivencia con selector de hoja (mejorada visualmente)
+        # Pestaña 2: Análisis de Supervivencia (sin cambios estructurales, solo mejoras visuales)
         return dbc.Container([
             dbc.Row([
                 dbc.Col([
@@ -444,7 +417,7 @@ def generar_excel_multiple(n_clicks):
     return href, nombre_excel, resultado
 
 # =============================================================================
-# CALLBACK PARA SUPERVIVENCIA CON SELECCIÓN DE HOJA (PESTAÑA 2) - IDÉNTICO AL FUNCIONAL
+# CALLBACK PARA SUPERVIVENCIA (IDÉNTICO AL FUNCIONAL, SIN CAMBIOS ESTRUCTURALES)
 # =============================================================================
 @app.callback(
     [Output('selector-hoja-wrapper', 'children'),
@@ -463,39 +436,32 @@ def generar_excel_multiple(n_clicks):
 )
 def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
     empty_fig = {}
-    # Si no hay archivo subido
     if contents is None:
         return "", [], html.Div(["Por favor, carga un archivo Excel."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Decodificar el archivo
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
 
-    # Obtener los nombres de las hojas
     try:
         excel_file = pd.ExcelFile(BytesIO(decoded))
         hojas = excel_file.sheet_names
     except Exception as e:
         return "", [], html.Div([f"Error al leer el archivo: {str(e)}"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Si no hay hoja seleccionada, mostrar el dropdown y salir (sin análisis)
     if hoja_seleccionada is None:
         opciones = [{'label': h, 'value': h} for h in hojas]
         return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, None, None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Verificar que la hoja seleccionada exista
     if hoja_seleccionada not in hojas:
         opciones = [{'label': h, 'value': h} for h in hojas]
         return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, html.Div(["Hoja no válida"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Leer la hoja seleccionada sin asumir header
     try:
         df_raw = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=None)
     except Exception as e:
         opciones = [{'label': h, 'value': h} for h in hojas]
         return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, html.Div([f"Error al leer la hoja: {str(e)}"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Buscar la fila donde aparece "Fila" (encabezado de la tabla)
     header_row_idx = None
     for i in range(len(df_raw)):
         if df_raw.iloc[i, 0] == 'Fila':
@@ -506,10 +472,8 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
         opciones = [{'label': h, 'value': h} for h in hojas]
         return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, html.Div(["No se encontró la fila de encabezado 'Fila' en esta hoja."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Leer los datos a partir de la fila siguiente al encabezado
     df = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=header_row_idx)
 
-    # Limpiar: eliminar filas donde 'Fila' no sea numérico
     df['Fila_temp'] = df['Fila'].astype(str).str.strip()
     mask_fila_valida = df['Fila_temp'].str.match(r'^\d+(\.\d+)?$', na=False)
     df = df[mask_fila_valida].copy()
@@ -519,7 +483,6 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
         opciones = [{'label': h, 'value': h} for h in hojas]
         return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, html.Div(["No se encontraron filas de datos numéricos en la tabla."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Convertir columnas numéricas
     columnas_numericas = ['Máximo', 'Sobrevivencia', 'Talla Comercial', 'Ejes ≥ 2',
                           'Ocup sustrato ≥ 80%', 'Altura ≥ 12 cm']
     for col in columnas_numericas:
@@ -546,7 +509,6 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
         opciones = [{'label': h, 'value': h} for h in hojas]
         return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, html.Div(["El total de 'Máximo' es cero, no se puede calcular porcentajes."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
-    # Cálculo de tasas
     total_sobrevivencia = df['Sobrevivencia'].sum()
     tasa_supervivencia = (total_sobrevivencia / total_maximo) * 100
     total_talla_comercial = df['Talla Comercial'].sum()
@@ -564,7 +526,6 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
     else:
         tasa_porcentaje_col = 0
 
-    # Alarmas
     condiciones = (
         (df['Sobrevivencia'] > df['Máximo']) |
         (df['Talla Comercial'] > df['Máximo']) |
@@ -638,7 +599,6 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
     else:
         fig_porcentaje_col = px.bar(title="% Col no disponible en el archivo", template="plotly_white")
 
-    # Leer metadatos (fecha y lote) desde posiciones fijas del Excel original (opcional)
     try:
         metadata_df = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=None)
         fecha_muestreo = metadata_df.iloc[5, 5] if metadata_df.shape[0] > 5 and metadata_df.shape[1] > 5 else "No disponible"
@@ -672,7 +632,6 @@ def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
         ], style={'overflowX': 'auto'})
     ])
 
-    # Devolver el dropdown actualizado y los resultados
     opciones = [{'label': h, 'value': h} for h in hojas]
     return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"]), opciones, alerta, resumen, fig_supervivencia, fig_talla_comercial, fig_ejes, fig_ocupacion, fig_altura, fig_porcentaje_col
 
