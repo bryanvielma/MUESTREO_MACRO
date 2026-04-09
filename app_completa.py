@@ -249,13 +249,13 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet.set_row(3, 5)
 
 # =============================================================================
-# APP DASH CON MEJORAS ESTÉTICAS (TEMA FLATLY, ESTABLE)
+# APP DASH CON MEJORAS ESTÉTICAS (PERO CONSERVANDO ESTRUCTURA FUNCIONAL)
 # =============================================================================
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 server = app.server
 app.title = "MACRO - Muestreo y Supervivencia"
 
-# Agregar Font Awesome
+# Agregar Font Awesome (opcional, para iconos)
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -273,55 +273,50 @@ app.index_string = '''
 </html>
 '''
 
-# Navbar
+# Navbar simple (sin interferir con el layout de pestañas)
 navbar = dbc.Navbar(
     dbc.Container([
         html.A(
             dbc.Row([
-                dbc.Col(html.Img(src="/assets/logo.png", height="40px") if os.path.exists(os.path.join(BASE_DIR, "assets", "logo.png")) else html.I(className="fas fa-leaf fa-2x text-white")),
+                dbc.Col(html.I(className="fas fa-leaf fa-2x text-white")),
                 dbc.Col(dbc.NavbarBrand("MACRO - Sistema de Gestión de Muestreos", className="ms-2 fw-bold")),
             ], align="center", className="g-0"),
             href="#", style={"textDecoration": "none"}
         ),
-        dbc.NavbarToggler(id="navbar-toggler"),
-        dbc.Collapse(
-            dbc.Nav([
-                dbc.NavItem(dbc.NavLink([html.I(className="fas fa-question-circle me-1"), "Ayuda"], href="#")),
-            ], className="ms-auto"),
-            id="navbar-collapse", navbar=True
-        )
     ]),
     color="success", dark=True, className="mb-4 shadow-sm"
 )
 
-# Footer
-footer = dbc.Navbar(
+# Footer simple
+footer = html.Footer(
     dbc.Container([
-        html.Span("© 2025 SynergiaBio - Versión 2.0", className="text-muted"),
-        html.Span([html.I(className="fas fa-chart-line me-1"), " Monitoreo continuo"], className="text-muted ms-3")
+        html.Hr(),
+        html.P("© 2025 SynergiaBio - Versión 2.0", className="text-center text-muted"),
+        html.P([html.I(className="fas fa-chart-line me-1"), " Monitoreo continuo"], className="text-center text-muted")
     ]),
-    color="light", sticky="bottom", className="mt-5 pt-3 pb-3 border-top"
+    className="mt-5"
 )
 
+# Layout principal (estructura probada que funciona)
 app.layout = dbc.Container([
     navbar,
-    dcc.Tabs(id="tabs", value="tab-muestra", className="mb-4", children=[
-        dcc.Tab(label=[html.I(className="fas fa-calculator me-2"), "Cálculo de Muestra"], value="tab-muestra"),
+    html.H1("Sistema de Gestión de Muestreos", className="text-center my-4"),
+    dcc.Tabs(id="tabs", value="tab-muestra", children=[
+        dcc.Tab(label=[html.I(className="fas fa-calculator me-2"), "Cálculo de Tamaño de Muestra"], value="tab-muestra"),
         dcc.Tab(label=[html.I(className="fas fa-chart-line me-2"), "Análisis de Supervivencia"], value="tab-supervivencia"),
     ]),
     html.Div(id="tab-content", className="mt-3"),
     footer
-], fluid=True, className="p-0")
+], fluid=True)
 
 # =============================================================================
-# PESTAÑA 1: GENERACIÓN DE EXCEL MÚLTIPLE
+# PESTAÑA 1: GENERACIÓN DE EXCEL MÚLTIPLE (CON MEJORAS VISUALES)
 # =============================================================================
 @app.callback(
     Output("tab-content", "children"),
     Input("tabs", "value")
 )
 def render_tab(tab):
-    print(f"DEBUG: Pestaña seleccionada -> {tab}")   # <-- depuración
     if tab == "tab-muestra":
         mensaje_exclusion = None
         if ids_excluidos:
@@ -357,7 +352,7 @@ def render_tab(tab):
             ], width=12, lg=8, className="mx-auto")
         ])
     else:
-        # Pestaña 2: Análisis de Supervivencia con selector de hoja
+        # Pestaña 2: Análisis de Supervivencia con selector de hoja (mejorada visualmente)
         return dbc.Container([
             dbc.Row([
                 dbc.Col([
@@ -449,7 +444,7 @@ def generar_excel_multiple(n_clicks):
     return href, nombre_excel, resultado
 
 # =============================================================================
-# CALLBACK PARA SUPERVIVENCIA CON SELECCIÓN DE HOJA (PESTAÑA 2)
+# CALLBACK PARA SUPERVIVENCIA CON SELECCIÓN DE HOJA (PESTAÑA 2) - IDÉNTICO AL FUNCIONAL
 # =============================================================================
 @app.callback(
     [Output('selector-hoja-wrapper', 'children'),
