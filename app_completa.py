@@ -25,14 +25,35 @@ ARCHIVO_EXCEL = os.path.join(OUTPUT_DIR, "Muestreos_Activos.xlsx")
 IMAGEN_RECORTADA = os.path.join(IMAGES_DIR, "imagen_recortada.jpg")
 
 # =============================================================================
-# CARGA DE DATOS (para la pestaña 1)
+# CARGA DE DATOS Y FILTRO DE LOTES CON "MN" (Perú)
 # =============================================================================
 if not os.path.exists(ARCHIVO_EXCEL):
     raise FileNotFoundError(f"No se encontró {ARCHIVO_EXCEL}. Asegúrate de subir el archivo.")
 
-muestreos_hoy = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Hoy")
-muestreos_proximos = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Proximos")
+muestreos_hoy_raw = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Hoy")
+muestreos_proximos_raw = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Proximos")
 
+# Función para identificar lotes con "MN" (Perú)
+def es_lote_peru(row):
+    imc = row.get("I-M-C", "")
+    return isinstance(imc, str) and "MN" in imc.upper()
+
+# Obtener IDs de lotes excluidos (Perú)
+ids_excluidos_hoy = muestreos_hoy_raw[muestreos_hoy_raw.apply(es_lote_peru, axis=1)]["ID"].tolist()
+ids_excluidos_prox = muestreos_proximos_raw[muestreos_proximos_raw.apply(es_lote_peru, axis=1)]["ID"].tolist()
+ids_excluidos = sorted(set(ids_excluidos_hoy + ids_excluidos_prox))
+
+# Filtrar lotes que NO contienen "MN" (los que sí se muestrean)
+def filtrar_sin_mn(df):
+    if 'I-M-C' not in df.columns:
+        return df
+    mask = df.apply(lambda row: not es_lote_peru(row), axis=1)
+    return df[mask].copy()
+
+muestreos_hoy = filtrar_sin_mn(muestreos_hoy_raw)
+muestreos_proximos = filtrar_sin_mn(muestreos_proximos_raw)
+
+# Convertir columnas numéricas y fechas
 for df in [muestreos_hoy, muestreos_proximos]:
     for col in ['Macetas actuales', 'Alveolos', 'Bandeja']:
         if col in df.columns:
@@ -77,24 +98,49 @@ app.layout = dbc.Container([
 )
 def render_tab(tab):
     if tab == "tab-muestra":
+        # Crear opciones de dropdown solo con lotes filtrados
+        opciones_hoy = [
+            {"label": f"{row['Código']} - {row.get('Variedad', '')}", "value": row["Código"]}
+            for _, row in muestreos_hoy.iterrows()
+        ] if not muestreos_hoy.empty else []
+        
+        opciones_prox = [
+            {"label": f"{row['Código']} - {row.get('Variedad', '')}", "value": row["Código"]}
+            for _, row in muestreos_proximos.iterrows()
+        ] if not muestreos_proximos.empty else []
+        
+        # Crear mensaje de exclusión (Perú)
+        mensaje_exclusion = None
+        if ids_excluidos:
+            ids_texto = ", ".join(str(id_) for id_ in ids_excluidos)
+            mensaje_exclusion = dbc.Alert(
+                [html.I(className="fas fa-info-circle me-2"), 
+                 f"⚠️ Los siguientes IDs corresponden a lotes en Perú (contienen 'MN') y NO se incluyen en los muestreos: {ids_texto}"],
+                color="warning",
+                dismissable=True,
+                className="mt-2"
+            )
+        
+        # Si no hay lotes disponibles, mostrar mensaje de advertencia
+        if not opciones_hoy and not opciones_prox:
+            return dbc.Row(dbc.Col([
+                mensaje_exclusion if mensaje_exclusion else html.Div(),
+                dbc.Alert("No hay lotes disponibles para muestreo (todos contienen 'MN' o no hay datos).", color="danger")
+            ], width=12))
+        
         return dbc.Row([
             dbc.Col([
+                mensaje_exclusion if mensaje_exclusion else html.Div(),
                 dcc.Dropdown(
                     id="dropdown-lote-hoy",
-                    options=[
-                        {"label": f"{row['Código']} - {row.get('Variedad', '')}", "value": row["Código"]}
-                        for _, row in muestreos_hoy.iterrows()
-                    ],
-                    placeholder="Seleccione un lote con muestreo hoy",
+                    options=opciones_hoy,
+                    placeholder="Seleccione un lote con muestreo hoy (sin MN)",
                     className="mb-3"
                 ),
                 dcc.Dropdown(
                     id="dropdown-lote",
-                    options=[
-                        {"label": f"{row['Código']} - {row.get('Variedad', '')}", "value": row["Código"]}
-                        for _, row in muestreos_proximos.iterrows()
-                    ],
-                    placeholder="Seleccione un lote próximo",
+                    options=opciones_prox,
+                    placeholder="Seleccione un lote próximo (sin MN)",
                     className="mb-3"
                 ),
                 dbc.Button("Calcular", id="btn-calcular", color="primary", className="w-100"),
@@ -158,6 +204,10 @@ def calcular_muestra_y_generar_excel(n_clicks, codigo_hoy, codigo):
         df_origen = muestreos_hoy
     else:
         df_origen = muestreos_proximos
+
+    # Verificar que el código exista en el dataframe filtrado
+    if codigo not in df_origen["Código"].values:
+        return "Error: El lote seleccionado no está disponible (posiblemente contiene 'MN' y fue filtrado).", "", ""
 
     try:
         lote = df_origen[df_origen["Código"] == codigo].iloc[0]
@@ -374,7 +424,7 @@ def calcular_muestra_y_generar_excel(n_clicks, codigo_hoy, codigo):
         return f"Error: {str(e)}", "", ""
 
 # =============================================================================
-# CALLBACK PARA LA PESTAÑA 2 (ANÁLISIS DE SUPERVIVENCIA)
+# CALLBACK PARA LA PESTAÑA 2 (ANÁLISIS DE SUPERVIVENCIA) - SIN CAMBIOS
 # =============================================================================
 @app.callback(
     [Output('output-alertas', 'children'),
