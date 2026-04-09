@@ -33,7 +33,6 @@ if not os.path.exists(ARCHIVO_EXCEL):
 muestreos_hoy_raw = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Hoy")
 muestreos_proximos_raw = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Proximos")
 
-# Función para identificar lotes con "MN" (Vivero los Viñedos - Perú)
 def es_lote_peru(row):
     imc = row.get("I-M-C", "")
     return isinstance(imc, str) and "MN" in imc.upper()
@@ -45,11 +44,9 @@ if 'fecha_activadora' in muestreos_hoy_raw.columns:
     mascara_fecha = muestreos_hoy_raw['fecha_activadora'].dt.date == hoy_date
     muestreos_hoy_raw = muestreos_hoy_raw[mascara_fecha].copy()
 
-# IDs excluidos (con MN) de hoy
 ids_excluidos_hoy = muestreos_hoy_raw[muestreos_hoy_raw.apply(es_lote_peru, axis=1)]["ID"].tolist()
 ids_excluidos = sorted(set(ids_excluidos_hoy))
 
-# Filtrar lotes que NO contienen "MN" (los que sí se muestrean)
 def filtrar_sin_mn(df):
     if 'I-M-C' not in df.columns:
         return df
@@ -59,7 +56,6 @@ def filtrar_sin_mn(df):
 muestreos_hoy = filtrar_sin_mn(muestreos_hoy_raw)
 muestreos_proximos = filtrar_sin_mn(muestreos_proximos_raw)
 
-# Convertir columnas numéricas
 for df in [muestreos_hoy, muestreos_proximos]:
     for col in ['Macetas actuales', 'Alveolos', 'Bandeja']:
         if col in df.columns:
@@ -68,20 +64,14 @@ for df in [muestreos_hoy, muestreos_proximos]:
         df['fecha_activadora'] = pd.to_datetime(df['fecha_activadora'], errors='coerce')
 
 # =============================================================================
-# FUNCIÓN PARA EXTRAER CANTIDAD DESDE I-M-C
+# FUNCIONES AUXILIARES
 # =============================================================================
 def extraer_cantidad_desde_imc(imc_str):
     if not isinstance(imc_str, str):
         return 0
-    patron = r'-C(\d+)'
-    numeros = re.findall(patron, imc_str)
-    if not numeros:
-        return 0
-    return sum(int(num) for num in numeros)
+    numeros = re.findall(r'-C(\d+)', imc_str)
+    return sum(int(n) for n in numeros) if numeros else 0
 
-# =============================================================================
-# FUNCIÓN PARA GENERAR DATOS DE UN LOTE (similar a antes, pero reutilizable)
-# =============================================================================
 def generar_datos_lote(lote):
     imc_raw = lote.get("I-M-C", "")
     if pd.isna(imc_raw):
@@ -90,10 +80,7 @@ def generar_datos_lote(lote):
     cantidad = extraer_cantidad_desde_imc(str(imc_raw))
     if cantidad == 0:
         cantidad = lote.get("Macetas actuales", 0)
-        if pd.isna(cantidad):
-            cantidad = 0
-        else:
-            cantidad = int(cantidad)
+        cantidad = int(cantidad) if not pd.isna(cantidad) else 0
     else:
         cantidad = int(cantidad)
 
@@ -112,10 +99,10 @@ def generar_datos_lote(lote):
     hileras = 20
 
     def calcular_tamano(c):
-        for limite, muestra in [(8, 2), (15, 3), (25, 5), (50, 8), (90, 13),
-                                (150, 20), (280, 40), (500, 60), (1200, 80),
-                                (3200, 140), (10000, 200), (35000, 320),
-                                (150000, 500), (500000, 800)]:
+        rangos = [(8,2),(15,3),(25,5),(50,8),(90,13),(150,20),(280,40),
+                  (500,60),(1200,80),(3200,140),(10000,200),(35000,320),
+                  (150000,500),(500000,800)]
+        for limite, muestra in rangos:
             if c <= limite:
                 return muestra
         return 1260
@@ -138,21 +125,18 @@ def generar_datos_lote(lote):
         start_plant = (r_idx - 1) * hileras + 1
         if (i == len(chosen_rows) - 1) and remainder > 0:
             for off_p in range(remainder):
-                plant_num = start_plant + off_p
-                rows.append({"Muestra": muestra_num, "Número Planta": plant_num, "Fila": r_idx})
+                rows.append({"Muestra": muestra_num, "Número Planta": start_plant + off_p, "Fila": r_idx})
                 muestra_num += 1
         else:
             for off_p in range(hileras):
-                plant_num = start_plant + off_p
-                rows.append({"Muestra": muestra_num, "Número Planta": plant_num, "Fila": r_idx})
+                rows.append({"Muestra": muestra_num, "Número Planta": start_plant + off_p, "Fila": r_idx})
                 muestra_num += 1
 
     if not rows:
         raise ValueError("No se generaron datos de muestra.")
 
-    tabla_df = pd.DataFrame(rows)
     return {
-        "tabla_df": tabla_df,
+        "tabla_df": pd.DataFrame(rows),
         "lote": lote,
         "cantidad": cantidad,
         "imc_val": imc_val,
@@ -161,9 +145,6 @@ def generar_datos_lote(lote):
         "muestra_tamano": muestra_tamano
     }
 
-# =============================================================================
-# FUNCIÓN PARA ESCRIBIR UNA HOJA EN EL WORKBOOK (reutilizable)
-# =============================================================================
 def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet = workbook.add_worksheet(nombre_hoja[:31])
     fmt_bold = workbook.add_format({'bold': True, 'border': 1, 'align': 'center', 'valign': 'vcenter'})
@@ -179,7 +160,6 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     bandejas_val = datos["bandejas_val"]
     litros = datos["litros"]
 
-    # Información del lote
     info = {
         "ID": lote.get("ID", "N/A"),
         "Fecha Inicial": lote.get("Fecha", "").strftime('%d-%m-%Y') if pd.notnull(lote.get("Fecha")) else "N/A",
@@ -197,7 +177,6 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet.set_row(start_row+1, 12)
     start_row += 2
 
-    # Bandeja, Volumen, Código
     worksheet.write(start_row, 0, "Bandeja", fmt_bold)
     worksheet.write(start_row, 1, "Vol. Sustrato (L)", fmt_bold)
     worksheet.write(start_row, 2, "Código", fmt_bold)
@@ -208,14 +187,12 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet.set_row(start_row+1, 12)
     start_row += 2
 
-    # I-M-C
     worksheet.merge_range(f'D{start_row-1}:H{start_row-1}', 'INVERNADERO - MESÓN - CANTIDAD (I-M-C)', fmt_bold)
     worksheet.merge_range(f'D{start_row}:H{start_row}', str(imc_val), fmt_norm)
     worksheet.set_row(start_row-1, 12)
     worksheet.set_row(start_row, 12)
     start_row += 2
 
-    # Tabla de resumen por fila
     worksheet.set_row(8, 5)
     header_row = 9
     filas_resumen = tabla_df.groupby("Fila").size().reset_index(name="Cantidad de Repeticiones")
@@ -233,7 +210,6 @@ def escribir_hoja(workbook, datos, nombre_hoja):
         worksheet.set_row(data_row+idx, 11)
     last_data = data_row + len(filas_resumen) - 1
 
-    # Responsable, fecha, firma
     blank = last_data + 1
     worksheet.set_row(blank, 5)
     resp_row = blank + 1
@@ -242,7 +218,6 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet.write(f'E{resp_row+1}', 'Firma: ___________', fmt_center)
     worksheet.set_row(resp_row, 12)
 
-    # Porcentajes
     blank2 = resp_row + 1
     worksheet.set_row(blank2, 5)
     pct_row = blank2 + 1
@@ -252,7 +227,6 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet.write(f'H{pct_row+1}', '', fmt_small)
     worksheet.set_row(pct_row, 10)
 
-    # Encabezado superior (imagen, título)
     worksheet.merge_range('A1:B2', '', fmt_bold)
     if os.path.exists(IMAGEN_RECORTADA):
         worksheet.insert_image('A1', IMAGEN_RECORTADA, {
@@ -270,7 +244,6 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet.write('F3', 'Vigente: 01/ 01/2025', cell_fmt)
     worksheet.write('G3', 'Folio:', cell_fmt)
 
-    # Anchos de columna
     for col, w in [('A',8),('B',13),('C',23),('D',12),('E',18),('F',18),('G',13),('H',9)]:
         worksheet.set_column(f'{col}:{col}', w)
     worksheet.set_row(3, 5)
@@ -292,7 +265,7 @@ app.layout = dbc.Container([
 ], fluid=True)
 
 # =============================================================================
-# CONTENIDO DE LA PESTAÑA 1 (MULTIPLE)
+# PESTAÑA 1: GENERACIÓN DE EXCEL MÚLTIPLE
 # =============================================================================
 @app.callback(
     Output("tab-content", "children"),
@@ -300,27 +273,21 @@ app.layout = dbc.Container([
 )
 def render_tab(tab):
     if tab == "tab-muestra":
-        # Mensaje de exclusión
         mensaje_exclusion = None
         if ids_excluidos:
             ids_texto = ", ".join(str(id_) for id_ in ids_excluidos)
             mensaje_exclusion = dbc.Alert(
                 [html.I(className="fas fa-info-circle me-2"), 
-                 f"⚠️ Los siguientes IDs corresponden a lotes en Vivero los Viñedos (PERÚ)  y no se incluyen en los muestreos de hoy: {ids_texto}"],
-                color="warning",
-                dismissable=True,
-                className="mt-2"
+                 f"⚠️ Los siguientes IDs corresponden a lotes en Vivero los Viñedos (PERÚ) no se incluyen en los muestreos de hoy: {ids_texto}"],
+                color="warning", dismissable=True, className="mt-2"
             )
-        
-        # Mostrar información de lotes disponibles
         info_lotes = html.Div()
         if not muestreos_hoy.empty:
             info_lotes = dbc.Card(
                 dbc.CardBody([
                     html.H5(f"Lotes a muestrear hoy ({len(muestreos_hoy)}):", className="card-title"),
                     html.Ul([html.Li(f"{row['Código']} - {row.get('Variedad', '')} (ID: {row['ID']})") for _, row in muestreos_hoy.iterrows()])
-                ]),
-                className="mb-3"
+                ]), className="mb-3"
             )
         else:
             info_lotes = dbc.Alert("No hay lotes programados para hoy (sin MN).", color="info")
@@ -338,7 +305,7 @@ def render_tab(tab):
             ], width=12)
         ])
     else:
-        # Pestaña de supervivencia (sin cambios)
+        # Pestaña 2: Análisis de Supervivencia con selector de hoja
         return dbc.Container([
             dbc.Row([
                 dbc.Col([
@@ -355,6 +322,8 @@ def render_tab(tab):
                         },
                         multiple=False
                     ),
+                    html.Div(id='selector-hoja-wrapper', style={'marginTop': '20px'}),
+                    dcc.Dropdown(id='selector-hoja', placeholder="Seleccione una hoja...", style={'marginBottom': '20px'}),
                     html.Div(id='output-alertas', style={'marginTop': '20px'}),
                     html.Div(id='output-data-upload', style={'marginTop': '20px'}),
                 ], width=12)
@@ -372,7 +341,7 @@ def render_tab(tab):
         ], fluid=True)
 
 # =============================================================================
-# CALLBACK PARA GENERAR EXCEL MÚLTIPLE
+# CALLBACK PARA GENERAR EXCEL MÚLTIPLE (PESTAÑA 1)
 # =============================================================================
 @app.callback(
     [Output("btn-descargar-multiple", "href"),
@@ -384,23 +353,19 @@ def render_tab(tab):
 def generar_excel_multiple(n_clicks):
     if not n_clicks:
         return "", "", "Presione el botón para generar el Excel."
-    
     if muestreos_hoy.empty:
         return "", "", "No hay lotes para muestrear hoy (todos contienen MN o no hay datos)."
     
     fecha_str = datetime.now().strftime("%d-%m-%Y")
     nombre_excel = f"MUESTREOS_MACRO_{fecha_str}.xlsx"
-    
     output = BytesIO()
     workbook = xlsxwriter.Workbook(output)
     
     lotes_procesados = []
     errores = []
-    
     for _, lote in muestreos_hoy.iterrows():
         try:
             datos = generar_datos_lote(lote)
-            # Nombre de la hoja: CÓDIGO_DÍAS
             codigo = str(lote["Código"])
             muestreo_activador = lote.get("muestreo_activador", "")
             if pd.notna(muestreo_activador):
@@ -410,7 +375,6 @@ def generar_excel_multiple(n_clicks):
             else:
                 nombre_hoja_base = codigo
             nombre_hoja = re.sub(r'[\\/*?:\[\]]', '_', nombre_hoja_base)[:31]
-            
             escribir_hoja(workbook, datos, nombre_hoja)
             lotes_procesados.append(codigo)
         except Exception as e:
@@ -418,25 +382,24 @@ def generar_excel_multiple(n_clicks):
     
     workbook.close()
     output.seek(0)
-    
     excel_data = base64.b64encode(output.read()).decode("utf-8")
     href = f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{excel_data}"
     
-    # Mensaje de resultado
     resultado = html.Div([
         html.P(f"✅ Excel generado correctamente con {len(lotes_procesados)} hoja(s)."),
         html.P(f"Lotes incluidos: {', '.join(lotes_procesados)}"),
     ])
     if errores:
         resultado.children.append(html.P(f"❌ Errores en: {', '.join(errores)}", style={"color": "red"}))
-    
     return href, nombre_excel, resultado
 
 # =============================================================================
-# CALLBACK PARA SUPERVIVENCIA (sin cambios, solo copiado)
+# CALLBACK PARA SUPERVIVENCIA CON SELECCIÓN DE HOJA (PESTAÑA 2)
 # =============================================================================
 @app.callback(
-    [Output('output-alertas', 'children'),
+    [Output('selector-hoja-wrapper', 'children'),
+     Output('selector-hoja', 'options'),
+     Output('output-alertas', 'children'),
      Output('output-data-upload', 'children'),
      Output('grafico-supervivencia', 'figure'),
      Output('grafico-talla-comercial', 'figure'),
@@ -444,188 +407,219 @@ def generar_excel_multiple(n_clicks):
      Output('grafico-ocupacion', 'figure'),
      Output('grafico-altura', 'figure'),
      Output('grafico-porcentaje-col', 'figure')],
-    [Input('upload-data', 'contents')],
+    [Input('upload-data', 'contents'),
+     Input('selector-hoja', 'value')],
     [State('upload-data', 'filename')]
 )
-def procesar_archivo(contents, filename):
+def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
+    empty_fig = {}
+    # Si no hay archivo subido
     if contents is None:
-        empty_fig = {}
-        return html.Div(["Por favor, carga un archivo Excel."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return "", [], html.Div(["Por favor, carga un archivo Excel."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
+    # Decodificar el archivo
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
 
+    # Obtener los nombres de las hojas
     try:
-        df_raw = pd.read_excel(BytesIO(decoded), header=None)
-        
-        # Buscar la fila donde aparece "Fila" (encabezado de la tabla)
-        header_row_idx = None
-        for i in range(len(df_raw)):
-            if df_raw.iloc[i, 0] == 'Fila':
-                header_row_idx = i
-                break
-        
-        if header_row_idx is None:
-            return html.Div(["No se encontró la fila de encabezado 'Fila' en el archivo."]), None, {}, {}, {}, {}, {}, {}
-        
-        df = pd.read_excel(BytesIO(decoded), header=header_row_idx)
-        
-        # Limpiar: eliminar filas donde 'Fila' no sea numérico
-        df['Fila_temp'] = df['Fila'].astype(str).str.strip()
-        mask_fila_valida = df['Fila_temp'].str.match(r'^\d+(\.\d+)?$', na=False)
-        df = df[mask_fila_valida].copy()
-        df.drop(columns=['Fila_temp'], inplace=True)
-        
-        if df.empty:
-            return html.Div(["No se encontraron filas de datos numéricos en la tabla."]), None, {}, {}, {}, {}, {}, {}
-        
-        columnas_numericas = ['Máximo', 'Sobrevivencia', 'Talla Comercial', 'Ejes ≥ 2',
-                              'Ocup sustrato ≥ 80%', 'Altura ≥ 12 cm']
-        for col in columnas_numericas:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-            else:
-                df[col] = 0
-        
-        if '% Col' in df.columns:
-            df['% Col'] = pd.to_numeric(df['% Col'], errors='coerce')
-            columnas_numericas.append('% Col')
+        excel_file = pd.ExcelFile(BytesIO(decoded))
+        hojas = excel_file.sheet_names
+    except Exception as e:
+        return "", [], html.Div([f"Error al leer el archivo: {str(e)}"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+
+    # Si no hay hoja seleccionada, mostrar el dropdown y salir (sin análisis)
+    if hoja_seleccionada is None:
+        opciones = [{'label': h, 'value': h} for h in hojas]
+        return html.Div("Seleccione una hoja:"), opciones, None, None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+
+    # Verificar que la hoja seleccionada exista
+    if hoja_seleccionada not in hojas:
+        opciones = [{'label': h, 'value': h} for h in hojas]
+        return html.Div("Hoja no encontrada, seleccione otra:"), opciones, html.Div(["Hoja no válida"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+
+    # Leer la hoja seleccionada sin asumir header
+    try:
+        df_raw = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=None)
+    except Exception as e:
+        opciones = [{'label': h, 'value': h} for h in hojas]
+        return html.Div("Error al leer la hoja:"), opciones, html.Div([f"Error: {str(e)}"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+
+    # Buscar la fila donde aparece "Fila" (encabezado de la tabla)
+    header_row_idx = None
+    for i in range(len(df_raw)):
+        if df_raw.iloc[i, 0] == 'Fila':
+            header_row_idx = i
+            break
+
+    if header_row_idx is None:
+        opciones = [{'label': h, 'value': h} for h in hojas]
+        return html.Div("Seleccione otra hoja:"), opciones, html.Div(["No se encontró la fila de encabezado 'Fila' en esta hoja."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+
+    # Leer los datos a partir de la fila siguiente al encabezado
+    df = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=header_row_idx)
+
+    # Limpiar: eliminar filas donde 'Fila' no sea numérico
+    df['Fila_temp'] = df['Fila'].astype(str).str.strip()
+    mask_fila_valida = df['Fila_temp'].str.match(r'^\d+(\.\d+)?$', na=False)
+    df = df[mask_fila_valida].copy()
+    df.drop(columns=['Fila_temp'], inplace=True)
+
+    if df.empty:
+        opciones = [{'label': h, 'value': h} for h in hojas]
+        return html.Div("Seleccione otra hoja:"), opciones, html.Div(["No se encontraron filas de datos numéricos en la tabla."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+
+    # Convertir columnas numéricas
+    columnas_numericas = ['Máximo', 'Sobrevivencia', 'Talla Comercial', 'Ejes ≥ 2',
+                          'Ocup sustrato ≥ 80%', 'Altura ≥ 12 cm']
+    for col in columnas_numericas:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
         else:
-            df['% Col'] = 0
-        
-        df[columnas_numericas] = df[columnas_numericas].fillna(0)
-        df['Fila'] = pd.to_numeric(df['Fila'], errors='coerce').fillna(0).astype(int).astype(str)
-        
-        if 'Máximo' not in df.columns:
-            return html.Div(["Columna 'Máximo' no encontrada."]), None, {}, {}, {}, {}, {}, {}
-        
-        total_maximo = df['Máximo'].sum()
-        if total_maximo == 0:
-            return html.Div(["El total de 'Máximo' es cero, no se puede calcular porcentajes."]), None, {}, {}, {}, {}, {}, {}
-        
-        total_sobrevivencia = df['Sobrevivencia'].sum()
-        tasa_supervivencia = (total_sobrevivencia / total_maximo) * 100
-        total_talla_comercial = df['Talla Comercial'].sum()
-        tasa_talla_comercial = (total_talla_comercial / total_maximo) * 100
-        total_ejes = df['Ejes ≥ 2'].sum()
-        tasa_ejes = (total_ejes / total_maximo) * 100
-        total_ocupacion = df['Ocup sustrato ≥ 80%'].sum()
-        tasa_ocupacion = (total_ocupacion / total_maximo) * 100
-        total_altura = df['Altura ≥ 12 cm'].sum()
-        tasa_altura = (total_altura / total_maximo) * 100
-        
-        if '% Col' in df.columns and df['% Col'].sum() > 0:
-            total_porcentaje_col = df['% Col'].sum()
-            tasa_porcentaje_col = (total_porcentaje_col / total_maximo) * 100
-        else:
-            tasa_porcentaje_col = 0
-        
-        condiciones = (
-            (df['Sobrevivencia'] > df['Máximo']) |
-            (df['Talla Comercial'] > df['Máximo']) |
-            (df['Ejes ≥ 2'] > df['Máximo']) |
-            (df['Ocup sustrato ≥ 80%'] > df['Máximo']) |
-            (df['Altura ≥ 12 cm'] > df['Máximo'])
-        )
-        if '% Col' in df.columns and '% Col' in df:
-            condiciones = condiciones | (df['% Col'] > df['Máximo'])
-        
-        filas_alerta = df[condiciones]
-        
-        alerta = html.Div([
-            html.H5("⚠️ Alarmas detectadas:", style={"color": "red"}),
-            html.P(f"Se encontraron {len(filas_alerta)} filas con valores fuera de rango."),
-            dash_table.DataTable(
-                data=filas_alerta.to_dict('records'),
-                columns=[{'name': i, 'id': i} for i in filas_alerta.columns],
-                style_table={'overflowX': 'auto', 'maxWidth': '100%'},
-                style_cell={'textAlign': 'center', 'padding': '5px', 'fontSize': '12px'},
-                style_header={'backgroundColor': 'lightgrey', 'fontWeight': 'bold'},
-                page_size=10
-            )
-        ]) if not filas_alerta.empty else html.Div([
-            html.H5("✅ No se detectaron alarmas.", style={"color": "green"})
-        ])
-        
-        tabla = dash_table.DataTable(
-            data=df.to_dict('records'),
-            columns=[{'name': i, 'id': i} for i in df.columns],
+            df[col] = 0
+
+    if '% Col' in df.columns:
+        df['% Col'] = pd.to_numeric(df['% Col'], errors='coerce')
+        columnas_numericas.append('% Col')
+    else:
+        df['% Col'] = 0
+
+    df[columnas_numericas] = df[columnas_numericas].fillna(0)
+    df['Fila'] = pd.to_numeric(df['Fila'], errors='coerce').fillna(0).astype(int).astype(str)
+
+    if 'Máximo' not in df.columns:
+        opciones = [{'label': h, 'value': h} for h in hojas]
+        return html.Div("Seleccione otra hoja:"), opciones, html.Div(["Columna 'Máximo' no encontrada."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+
+    total_maximo = df['Máximo'].sum()
+    if total_maximo == 0:
+        opciones = [{'label': h, 'value': h} for h in hojas]
+        return html.Div("Seleccione otra hoja:"), opciones, html.Div(["El total de 'Máximo' es cero, no se puede calcular porcentajes."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+
+    # Cálculo de tasas
+    total_sobrevivencia = df['Sobrevivencia'].sum()
+    tasa_supervivencia = (total_sobrevivencia / total_maximo) * 100
+    total_talla_comercial = df['Talla Comercial'].sum()
+    tasa_talla_comercial = (total_talla_comercial / total_maximo) * 100
+    total_ejes = df['Ejes ≥ 2'].sum()
+    tasa_ejes = (total_ejes / total_maximo) * 100
+    total_ocupacion = df['Ocup sustrato ≥ 80%'].sum()
+    tasa_ocupacion = (total_ocupacion / total_maximo) * 100
+    total_altura = df['Altura ≥ 12 cm'].sum()
+    tasa_altura = (total_altura / total_maximo) * 100
+
+    if '% Col' in df.columns and df['% Col'].sum() > 0:
+        total_porcentaje_col = df['% Col'].sum()
+        tasa_porcentaje_col = (total_porcentaje_col / total_maximo) * 100
+    else:
+        tasa_porcentaje_col = 0
+
+    # Alarmas
+    condiciones = (
+        (df['Sobrevivencia'] > df['Máximo']) |
+        (df['Talla Comercial'] > df['Máximo']) |
+        (df['Ejes ≥ 2'] > df['Máximo']) |
+        (df['Ocup sustrato ≥ 80%'] > df['Máximo']) |
+        (df['Altura ≥ 12 cm'] > df['Máximo'])
+    )
+    if '% Col' in df.columns and '% Col' in df:
+        condiciones = condiciones | (df['% Col'] > df['Máximo'])
+
+    filas_alerta = df[condiciones]
+
+    alerta = html.Div([
+        html.H5("⚠️ Alarmas detectadas:", style={"color": "red"}),
+        html.P(f"Se encontraron {len(filas_alerta)} filas con valores fuera de rango."),
+        dash_table.DataTable(
+            data=filas_alerta.to_dict('records'),
+            columns=[{'name': i, 'id': i} for i in filas_alerta.columns],
             style_table={'overflowX': 'auto', 'maxWidth': '100%'},
             style_cell={'textAlign': 'center', 'padding': '5px', 'fontSize': '12px'},
             style_header={'backgroundColor': 'lightgrey', 'fontWeight': 'bold'},
             page_size=10
         )
-        
-        filas_unicas = df['Fila'].tolist()
-        
-        def crear_grafico(col_y, titulo, color, label_y):
-            if col_y not in df.columns:
-                return px.bar(title=f"{titulo} - Columna no encontrada")
-            fig = px.bar(
-                df, x='Fila', y=col_y,
-                title=titulo,
-                labels={'Fila': 'Fila', col_y: label_y},
-                color_discrete_sequence=[color]
-            )
-            fig.update_traces(text=df[col_y], textposition='outside')
-            fig.update_layout(
-                xaxis=dict(tickmode='array', tickvals=filas_unicas, ticktext=filas_unicas, tickangle=-45),
-                xaxis_title="Fila", yaxis_title=label_y,
-                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(size=10), margin=dict(t=60, b=80, l=50, r=50),
-                height=400
-            )
-            return fig
-        
-        fig_supervivencia = crear_grafico('Sobrevivencia', f'Supervivencia: {tasa_supervivencia:.2f}%', '#1f77b4', 'Plantas Vivas')
-        fig_talla_comercial = crear_grafico('Talla Comercial', f'Talla Comercial: {tasa_talla_comercial:.2f}%', '#ff7f0e', 'Plantas en Talla Comercial')
-        fig_ejes = crear_grafico('Ejes ≥ 2', f'Ejes ≥ 2: {tasa_ejes:.2f}%', '#2ca02c', 'Plantas con Ejes ≥ 2')
-        fig_ocupacion = crear_grafico('Ocup sustrato ≥ 80%', f'Ocupación Sustrato ≥ 80%: {tasa_ocupacion:.2f}%', '#d62728', 'Plantas con Ocupación ≥ 80%')
-        fig_altura = crear_grafico('Altura ≥ 12 cm', f'Altura ≥ 12 cm: {tasa_altura:.2f}%', '#9467bd', 'Plantas con Altura ≥ 12 cm')
-        
-        if '% Col' in df.columns and df['% Col'].sum() > 0:
-            fig_porcentaje_col = crear_grafico('% Col', f'% Col: {tasa_porcentaje_col:.2f}%', '#8c564b', 'Plantas con % Col')
-        else:
-            fig_porcentaje_col = px.bar(title="% Col no disponible en el archivo")
-        
-        # Leer metadatos (fecha y lote) desde posiciones fijas del Excel original
-        metadata_df = pd.read_excel(BytesIO(decoded), header=None)
+    ]) if not filas_alerta.empty else html.Div([
+        html.H5("✅ No se detectaron alarmas.", style={"color": "green"})
+    ])
+
+    tabla = dash_table.DataTable(
+        data=df.to_dict('records'),
+        columns=[{'name': i, 'id': i} for i in df.columns],
+        style_table={'overflowX': 'auto', 'maxWidth': '100%'},
+        style_cell={'textAlign': 'center', 'padding': '5px', 'fontSize': '12px'},
+        style_header={'backgroundColor': 'lightgrey', 'fontWeight': 'bold'},
+        page_size=10
+    )
+
+    filas_unicas = df['Fila'].tolist()
+
+    def crear_grafico(col_y, titulo, color, label_y):
+        if col_y not in df.columns:
+            return px.bar(title=f"{titulo} - Columna no encontrada")
+        fig = px.bar(
+            df, x='Fila', y=col_y,
+            title=titulo,
+            labels={'Fila': 'Fila', col_y: label_y},
+            color_discrete_sequence=[color]
+        )
+        fig.update_traces(text=df[col_y], textposition='outside')
+        fig.update_layout(
+            xaxis=dict(tickmode='array', tickvals=filas_unicas, ticktext=filas_unicas, tickangle=-45),
+            xaxis_title="Fila", yaxis_title=label_y,
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(size=10), margin=dict(t=60, b=80, l=50, r=50),
+            height=400
+        )
+        return fig
+
+    fig_supervivencia = crear_grafico('Sobrevivencia', f'Supervivencia: {tasa_supervivencia:.2f}%', '#1f77b4', 'Plantas Vivas')
+    fig_talla_comercial = crear_grafico('Talla Comercial', f'Talla Comercial: {tasa_talla_comercial:.2f}%', '#ff7f0e', 'Plantas en Talla Comercial')
+    fig_ejes = crear_grafico('Ejes ≥ 2', f'Ejes ≥ 2: {tasa_ejes:.2f}%', '#2ca02c', 'Plantas con Ejes ≥ 2')
+    fig_ocupacion = crear_grafico('Ocup sustrato ≥ 80%', f'Ocupación Sustrato ≥ 80%: {tasa_ocupacion:.2f}%', '#d62728', 'Plantas con Ocupación ≥ 80%')
+    fig_altura = crear_grafico('Altura ≥ 12 cm', f'Altura ≥ 12 cm: {tasa_altura:.2f}%', '#9467bd', 'Plantas con Altura ≥ 12 cm')
+
+    if '% Col' in df.columns and df['% Col'].sum() > 0:
+        fig_porcentaje_col = crear_grafico('% Col', f'% Col: {tasa_porcentaje_col:.2f}%', '#8c564b', 'Plantas con % Col')
+    else:
+        fig_porcentaje_col = px.bar(title="% Col no disponible en el archivo")
+
+    # Leer metadatos (fecha y lote) desde posiciones fijas del Excel original (opcional)
+    try:
+        metadata_df = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=None)
         fecha_muestreo = metadata_df.iloc[5, 5] if metadata_df.shape[0] > 5 and metadata_df.shape[1] > 5 else "No disponible"
         lote = metadata_df.iloc[7, 2] if metadata_df.shape[0] > 7 and metadata_df.shape[1] > 2 else "No disponible"
-        
-        try:
-            if isinstance(fecha_muestreo, str):
-                fecha_muestreo = pd.to_datetime(fecha_muestreo, format="%d-%m-%Y", errors="raise")
-            elif isinstance(fecha_muestreo, (int, float)):
-                fecha_muestreo = pd.to_datetime("1899-12-30") + pd.to_timedelta(int(fecha_muestreo), unit="D")
-            fecha_muestreo = fecha_muestreo.strftime('%d-%m-%Y')
-        except Exception:
-            fecha_muestreo = "Formato de fecha inválido"
-        
-        resumen = dbc.Container([
-            dbc.Card(
-                dbc.CardBody([
-                    html.H5(f"Archivo cargado: {filename}", className="text-center text-primary mb-4"),
-                    html.P(f"Lote maceta: {lote}", className="text-center mb-2"),
-                    html.P(f"Fecha Muestreo: {fecha_muestreo}", className="text-center mb-2"),
-                    html.P(f"N° macetas muestreo: {int(total_maximo):,}".replace(",", "."), className="text-center mb-2"),
-                    html.P(f"% plantas vivas: {tasa_supervivencia:.2f}%".replace('.', ','), className="text-center mb-2"),
-                    html.P(f"% plantas comerciales: {tasa_talla_comercial:.2f}%".replace('.', ','), className="text-center mb-2"),
-                ]),
-                className="shadow-sm bg-light p-4 mx-auto",
-                style={"maxWidth": "500px"}
-            ),
-            html.Div([
-                html.H5("Tabla de Datos", className="text-center text-primary mt-4"),
-                tabla
-            ], style={'overflowX': 'auto'})
-        ])
-        
-        return alerta, resumen, fig_supervivencia, fig_talla_comercial, fig_ejes, fig_ocupacion, fig_altura, fig_porcentaje_col
-        
-    except Exception as e:
-        empty_fig = {}
-        return html.Div([f"Error al procesar el archivo: {str(e)}"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        if isinstance(fecha_muestreo, str):
+            fecha_muestreo = pd.to_datetime(fecha_muestreo, format="%d-%m-%Y", errors="raise")
+        elif isinstance(fecha_muestreo, (int, float)):
+            fecha_muestreo = pd.to_datetime("1899-12-30") + pd.to_timedelta(int(fecha_muestreo), unit="D")
+        fecha_muestreo = fecha_muestreo.strftime('%d-%m-%Y')
+    except Exception:
+        fecha_muestreo = "No disponible"
+        lote = "No disponible"
+
+    resumen = dbc.Container([
+        dbc.Card(
+            dbc.CardBody([
+                html.H5(f"Archivo cargado: {filename}", className="text-center text-primary mb-4"),
+                html.P(f"Hoja seleccionada: {hoja_seleccionada}", className="text-center mb-2"),
+                html.P(f"Lote maceta: {lote}", className="text-center mb-2"),
+                html.P(f"Fecha Muestreo: {fecha_muestreo}", className="text-center mb-2"),
+                html.P(f"N° macetas muestreo: {int(total_maximo):,}".replace(",", "."), className="text-center mb-2"),
+                html.P(f"% plantas vivas: {tasa_supervivencia:.2f}%".replace('.', ','), className="text-center mb-2"),
+                html.P(f"% plantas comerciales: {tasa_talla_comercial:.2f}%".replace('.', ','), className="text-center mb-2"),
+            ]),
+            className="shadow-sm bg-light p-4 mx-auto",
+            style={"maxWidth": "500px"}
+        ),
+        html.Div([
+            html.H5("Tabla de Datos", className="text-center text-primary mt-4"),
+            tabla
+        ], style={'overflowX': 'auto'})
+    ])
+
+    # Devolver el dropdown actualizado (sin cambios en opciones) y los resultados
+    opciones = [{'label': h, 'value': h} for h in hojas]
+    return html.Div("Seleccione una hoja:"), opciones, alerta, resumen, fig_supervivencia, fig_talla_comercial, fig_ejes, fig_ocupacion, fig_altura, fig_porcentaje_col
 
 # =============================================================================
 # EJECUCIÓN
