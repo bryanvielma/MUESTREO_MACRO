@@ -1,1 +1,1 @@
-web: gunicorn app_ingresar_excels:server
+web: gunicorn app_completa:server
