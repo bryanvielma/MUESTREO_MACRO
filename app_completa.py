@@ -27,11 +27,14 @@ IMAGEN_RECORTADA = os.path.join(IMAGES_DIR, "imagen_recortada.jpg")
 # =============================================================================
 # CARGA Y FILTRADO DE DATOS
 # =============================================================================
-if not os.path.exists(ARCHIVO_EXCEL):
-    raise FileNotFoundError(f"No se encontró {ARCHIVO_EXCEL}.")
 
-muestreos_hoy_raw      = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Hoy")
-muestreos_proximos_raw = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Proximos")
+if os.path.exists(ARCHIVO_EXCEL):
+    muestreos_hoy_raw      = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Hoy")
+    muestreos_proximos_raw = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Proximos")
+else:
+    print(f"WARNING: No se encontró {ARCHIVO_EXCEL}")
+    muestreos_hoy_raw = pd.DataFrame()
+    muestreos_proximos_raw = pd.DataFrame()
 
 def es_lote_peru(row):
     imc = row.get("I-M-C", "")
