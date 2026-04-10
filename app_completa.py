@@ -837,7 +837,7 @@ def render_tab(tab):
             ids_txt = ", ".join(str(i) for i in ids_excluidos)
             excl = dbc.Alert([
                 html.I(className="fas fa-info-circle me-2"),
-                f"IDs excluidos (Vivero los Viñedos · Perú ) ID's: {ids_txt}"
+                f"IDs en Vivero los Viñedos · Perú: {ids_txt}"
             ], color="warning", dismissable=True, style={"marginBottom":"16px"})
 
         n_lotes   = len(muestreos_hoy)
