@@ -25,7 +25,7 @@ ARCHIVO_EXCEL = os.path.join(OUTPUT_DIR, "Muestreos_Activos.xlsx")
 IMAGEN_RECORTADA = os.path.join(IMAGES_DIR, "imagen_recortada.jpg")
 
 # =============================================================================
-# CARGA Y FILTRADO DE DATOS
+# CARGA Y FILTRADO DE DATOS (igual que antes)
 # =============================================================================
 if not os.path.exists(ARCHIVO_EXCEL):
     raise FileNotFoundError(f"No se encontró {ARCHIVO_EXCEL}.")
@@ -64,7 +64,7 @@ for df in [muestreos_hoy, muestreos_proximos]:
         df['fecha_activadora'] = pd.to_datetime(df['fecha_activadora'], errors='coerce')
 
 # =============================================================================
-# FUNCIONES AUXILIARES
+# FUNCIONES AUXILIARES (para generar Excel, igual que antes)
 # =============================================================================
 def extraer_cantidad_desde_imc(imc_str):
     if not isinstance(imc_str, str):
@@ -248,7 +248,7 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     worksheet.set_row(3, 5)
 
 # =============================================================================
-# BIOTECH LABORATORY CSS - Modern, clean, no cream colors
+# CSS (exactamente el mismo que ya tenías, sin crema)
 # =============================================================================
 CUSTOM_CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -598,7 +598,7 @@ body::before {
   color: var(--primary) !important;
 }
 
-/* DROPDOWN */
+/* DROPDOWN (si se usa, pero en la nueva versión ya no lo necesitas) */
 .Select-control {
   background: var(--surface) !important;
   border: 1px solid var(--gray-300) !important;
@@ -758,7 +758,7 @@ body::before {
 }
 """
 
-# ── PLOTLY TEMPLATE ──────────────────────────────────────────────────────────
+# ── PLOTLY TEMPLATE (ajustado a los colores de la app) ─────────────────────
 PLOT_LAYOUT = dict(
     plot_bgcolor="rgba(248,250,252,0.8)",
     paper_bgcolor="rgba(0,0,0,0)",
@@ -773,8 +773,7 @@ PLOT_LAYOUT = dict(
     legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#475569")),
 )
 
-# Modern biotech palette for charts
-CHART_COLORS = ["#FFF700", "#C800FF", "#2900E0", "#FF0000", "#C6CCCA", "#00EAFB"]
+CHART_COLORS = ["#1A6D4C", "#2C7DA0", "#20B2AA", "#4A9E7A", "#0B3B2F", "#0288D1"]
 
 # =============================================================================
 # APP
@@ -829,9 +828,8 @@ app.layout = dbc.Container([
 # =============================================================================
 @app.callback(Output("tab-content","children"), Input("tabs","value"))
 def render_tab(tab):
-
     if tab == "tab-muestra":
-
+        # ========== PESTAÑA DE CÁLCULO DE MUESTRA (EXACTAMENTE IGUAL) ==========
         excl = None
         if ids_excluidos:
             ids_txt = ", ".join(str(i) for i in ids_excluidos)
@@ -909,12 +907,13 @@ def render_tab(tab):
         return html.Div([excl or html.Div(), kpi, lotes_ui, acc_row, log_card])
 
     else:
+        # ========== PESTAÑA DE ANÁLISIS DE SUPERVIVENCIA CON SUB‑PESTAÑAS ==========
         return dbc.Container([
             dbc.Row([
                 dbc.Col([
                     html.Div("Cargar archivo de resultados", className="sec-lbl"),
                     dcc.Upload(
-                        id='upload-data',
+                        id='upload-data-survival',
                         children=html.Div([
                             html.I(className="fas fa-file-upload me-2",
                                    style={"color":"var(--primary)"}),
@@ -927,51 +926,15 @@ def render_tab(tab):
                                'textAlign':'center','cursor':'pointer'},
                         className="upload-zone", multiple=False
                     ),
-                ], md=7),
-                dbc.Col([
-                    html.Div("Hoja de análisis", className="sec-lbl"),
-                    html.Div(id='selector-hoja-wrapper'),
-                    dcc.Dropdown(id='selector-hoja',
-                                 placeholder="Seleccione una hoja…",
-                                 style={"borderRadius":"6px","fontSize":"0.84rem"}),
-                ], md=5,
-                   style={"display":"flex","flexDirection":"column","justifyContent":"flex-end"}),
-            ], className="g-4 mb-4"),
-
-            html.Div(id='output-alertas',    style={"marginBottom":"16px"}),
-            html.Div(id='output-data-upload',style={"marginBottom":"24px"}),
-
-            html.Div("Indicadores de calidad por fila", className="sec-lbl",
-                     style={"marginBottom":"14px"}),
-
-            dbc.Row([
-                dbc.Col(html.Div(dcc.Graph(id="grafico-supervivencia",
-                                           config={'displayModeBar':False}),
-                                 className="chart-wrap"), md=4),
-                dbc.Col(html.Div(dcc.Graph(id="grafico-talla-comercial",
-                                           config={'displayModeBar':False}),
-                                 className="chart-wrap"), md=4),
-                dbc.Col(html.Div(dcc.Graph(id="grafico-ejes",
-                                           config={'displayModeBar':False}),
-                                 className="chart-wrap"), md=4),
-            ], className="g-3 mb-3"),
-
-            dbc.Row([
-                dbc.Col(html.Div(dcc.Graph(id="grafico-ocupacion",
-                                           config={'displayModeBar':False}),
-                                 className="chart-wrap"), md=4),
-                dbc.Col(html.Div(dcc.Graph(id="grafico-altura",
-                                           config={'displayModeBar':False}),
-                                 className="chart-wrap"), md=4),
-                dbc.Col(html.Div(dcc.Graph(id="grafico-porcentaje-col",
-                                           config={'displayModeBar':False}),
-                                 className="chart-wrap"), md=4),
-            ], className="g-3 mb-4"),
+                    html.Div(id='survival-upload-status', style={'marginTop':'10px'}),
+                ], width=12)
+            ]),
+            html.Div(id='survival-tabs-container', style={'marginTop':'30px'})
         ], fluid=True)
 
 
 # =============================================================================
-# CALLBACK GENERAR EXCEL
+# CALLBACK PARA GENERAR EXCEL (PESTAÑA 1)
 # =============================================================================
 @app.callback(
     [Output("btn-descargar-multiple","href"),
@@ -1021,216 +984,300 @@ def generar_excel_multiple(n_clicks):
 
 
 # =============================================================================
-# CALLBACK SUPERVIVENCIA (MODIFICADO PARA INCLUIR EL ID)
+# FUNCIÓN PARA PROCESAR UNA HOJA Y DEVOLVER SU CONTENIDO (igual a la que te gustó)
 # =============================================================================
-@app.callback(
-    [Output('selector-hoja-wrapper','children'),
-     Output('selector-hoja','options'),
-     Output('output-alertas','children'),
-     Output('output-data-upload','children'),
-     Output('grafico-supervivencia','figure'),
-     Output('grafico-talla-comercial','figure'),
-     Output('grafico-ejes','figure'),
-     Output('grafico-ocupacion','figure'),
-     Output('grafico-altura','figure'),
-     Output('grafico-porcentaje-col','figure')],
-    [Input('upload-data','contents'), Input('selector-hoja','value')],
-    [State('upload-data','filename')]
-)
-def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
-    ef = {"layout": {**PLOT_LAYOUT,
-                     "title":{"text":"Sin datos · carga un archivo",
-                               "font":{"color":"#94A3B8"}}}}
-
-    if contents is None:
-        msg = html.Div(
-            [html.I(className="fas fa-leaf me-2", style={"color":"var(--primary-light)"}),
-             "Carga un archivo Excel para comenzar el análisis."],
-            style={"textAlign":"center","padding":"28px","color":"var(--gray-500)",
-                   "fontSize":"0.85rem","background":"var(--gray-50)",
-                   "border":"1px dashed var(--gray-300)","borderRadius":"var(--radius-md)"}
-        )
-        return "", [], msg, None, ef, ef, ef, ef, ef, ef
-
-    _, cs = contents.split(',')
-    decoded = base64.b64decode(cs)
-
+def procesar_hoja(decoded, sheet_name, filename):
+    """Procesa una hoja y devuelve los componentes (alertas, resumen, figuras)"""
+    empty_fig = {}
     try:
-        hojas = pd.ExcelFile(BytesIO(decoded)).sheet_names
+        df_raw = pd.read_excel(BytesIO(decoded), sheet_name=sheet_name, header=None)
     except Exception as e:
-        return "", [], dbc.Alert(f"Error: {e}", color="danger"), None, ef,ef,ef,ef,ef,ef
+        return {
+            "error": f"Error al leer la hoja {sheet_name}: {str(e)}",
+            "alerta": html.Div([f"Error: {str(e)}"], className="text-danger"),
+            "resumen": None,
+            "fig_supervivencia": empty_fig,
+            "fig_talla_comercial": empty_fig,
+            "fig_ejes": empty_fig,
+            "fig_ocupacion": empty_fig,
+            "fig_altura": empty_fig,
+            "fig_porcentaje_col": empty_fig
+        }
 
-    opciones = [{'label': h, 'value': h} for h in hojas]
+    # Buscar fila con "Fila"
+    header_row_idx = None
+    for i in range(len(df_raw)):
+        if df_raw.iloc[i, 0] == 'Fila':
+            header_row_idx = i
+            break
 
-    if hoja_seleccionada is None or hoja_seleccionada not in hojas:
-        return html.Div(), opciones, None, None, ef,ef,ef,ef,ef,ef
+    if header_row_idx is None:
+        return {
+            "error": f"No se encontró encabezado 'Fila' en hoja {sheet_name}",
+            "alerta": html.Div(["No se encontró la fila de encabezado 'Fila'."], className="text-warning"),
+            "resumen": None,
+            "fig_supervivencia": empty_fig,
+            "fig_talla_comercial": empty_fig,
+            "fig_ejes": empty_fig,
+            "fig_ocupacion": empty_fig,
+            "fig_altura": empty_fig,
+            "fig_porcentaje_col": empty_fig
+        }
 
-    try:
-        df_raw = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=None)
-    except Exception as e:
-        return html.Div(), opciones, dbc.Alert(f"Error: {e}", color="danger"), None, ef,ef,ef,ef,ef,ef
+    df = pd.read_excel(BytesIO(decoded), sheet_name=sheet_name, header=header_row_idx)
 
-    hri = next((i for i in range(len(df_raw)) if df_raw.iloc[i,0] == 'Fila'), None)
-    if hri is None:
-        return html.Div(), opciones, \
-               dbc.Alert("No se encontró el encabezado 'Fila'.", color="warning"), \
-               None, ef,ef,ef,ef,ef,ef
-
-    df = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=hri)
-    df['_t'] = df['Fila'].astype(str).str.strip()
-    df = df[df['_t'].str.match(r'^\d+(\.\d+)?$', na=False)].drop(columns=['_t']).copy()
+    # Limpiar: conservar solo filas con 'Fila' numérico
+    df['Fila_temp'] = df['Fila'].astype(str).str.strip()
+    mask_fila_valida = df['Fila_temp'].str.match(r'^\d+(\.\d+)?$', na=False)
+    df = df[mask_fila_valida].copy()
+    df.drop(columns=['Fila_temp'], inplace=True)
 
     if df.empty:
-        return html.Div(), opciones, \
-               dbc.Alert("Sin filas numéricas válidas.", color="warning"), \
-               None, ef,ef,ef,ef,ef,ef
+        return {
+            "error": f"No hay datos numéricos en hoja {sheet_name}",
+            "alerta": html.Div(["No se encontraron filas de datos numéricos."], className="text-warning"),
+            "resumen": None,
+            "fig_supervivencia": empty_fig,
+            "fig_talla_comercial": empty_fig,
+            "fig_ejes": empty_fig,
+            "fig_ocupacion": empty_fig,
+            "fig_altura": empty_fig,
+            "fig_porcentaje_col": empty_fig
+        }
 
-    for c in ['Máximo','Sobrevivencia','Talla Comercial','Ejes ≥ 2',
-              'Ocup sustrato ≥ 80%','Altura ≥ 12 cm','% Col']:
-        df[c] = pd.to_numeric(df.get(c, 0), errors='coerce').fillna(0)
+    columnas_numericas = ['Máximo', 'Sobrevivencia', 'Talla Comercial', 'Ejes ≥ 2',
+                          'Ocup sustrato ≥ 80%', 'Altura ≥ 12 cm']
+    for col in columnas_numericas:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+        else:
+            df[col] = 0
 
+    if '% Col' in df.columns:
+        df['% Col'] = pd.to_numeric(df['% Col'], errors='coerce')
+    else:
+        df['% Col'] = 0
+
+    df[columnas_numericas + ['% Col']] = df[columnas_numericas + ['% Col']].fillna(0)
     df['Fila'] = pd.to_numeric(df['Fila'], errors='coerce').fillna(0).astype(int).astype(str)
 
-    tot = df['Máximo'].sum()
-    if tot == 0:
-        return html.Div(), opciones, \
-               dbc.Alert("Total Máximo = 0, no se puede calcular.", color="danger"), \
-               None, ef,ef,ef,ef,ef,ef
+    if 'Máximo' not in df.columns:
+        return {
+            "error": f"Columna 'Máximo' no encontrada en hoja {sheet_name}",
+            "alerta": html.Div(["Columna 'Máximo' no encontrada."], className="text-warning"),
+            "resumen": None,
+            "fig_supervivencia": empty_fig,
+            "fig_talla_comercial": empty_fig,
+            "fig_ejes": empty_fig,
+            "fig_ocupacion": empty_fig,
+            "fig_altura": empty_fig,
+            "fig_porcentaje_col": empty_fig
+        }
 
-    def pct(c): return (df[c].sum() / tot) * 100
+    total_maximo = df['Máximo'].sum()
+    if total_maximo == 0:
+        return {
+            "error": f"Total Máximo = 0 en hoja {sheet_name}",
+            "alerta": html.Div(["Total Máximo es cero, no se pueden calcular porcentajes."], className="text-warning"),
+            "resumen": None,
+            "fig_supervivencia": empty_fig,
+            "fig_talla_comercial": empty_fig,
+            "fig_ejes": empty_fig,
+            "fig_ocupacion": empty_fig,
+            "fig_altura": empty_fig,
+            "fig_porcentaje_col": empty_fig
+        }
 
-    ts = pct('Sobrevivencia'); tc = pct('Talla Comercial'); tejs = pct('Ejes ≥ 2')
-    tocu = pct('Ocup sustrato ≥ 80%'); talt = pct('Altura ≥ 12 cm')
-    tcol = pct('% Col') if df['% Col'].sum() > 0 else 0
+    total_sobrevivencia = df['Sobrevivencia'].sum()
+    tasa_supervivencia = (total_sobrevivencia / total_maximo) * 100
+    total_talla_comercial = df['Talla Comercial'].sum()
+    tasa_talla_comercial = (total_talla_comercial / total_maximo) * 100
+    total_ejes = df['Ejes ≥ 2'].sum()
+    tasa_ejes = (total_ejes / total_maximo) * 100
+    total_ocupacion = df['Ocup sustrato ≥ 80%'].sum()
+    tasa_ocupacion = (total_ocupacion / total_maximo) * 100
+    total_altura = df['Altura ≥ 12 cm'].sum()
+    tasa_altura = (total_altura / total_maximo) * 100
+
+    if '% Col' in df.columns and df['% Col'].sum() > 0:
+        total_porcentaje_col = df['% Col'].sum()
+        tasa_porcentaje_col = (total_porcentaje_col / total_maximo) * 100
+    else:
+        tasa_porcentaje_col = 0
 
     # Alarmas
-    cond = ((df['Sobrevivencia']>df['Máximo'])|(df['Talla Comercial']>df['Máximo'])|
-            (df['Ejes ≥ 2']>df['Máximo'])|(df['Ocup sustrato ≥ 80%']>df['Máximo'])|
-            (df['Altura ≥ 12 cm']>df['Máximo'])|(df['% Col']>df['Máximo']))
-    fa = df[cond]
-
-    alerta_ui = (
-        html.Div([
-            dbc.Alert([html.I(className="fas fa-exclamation-triangle me-2"),
-                       f"{len(fa)} fila(s) con valores fuera de rango"],
-                      color="warning", style={"marginBottom":"10px"}),
-            dash_table.DataTable(
-                data=fa.to_dict('records'),
-                columns=[{'name':i,'id':i} for i in fa.columns],
-                style_table={'overflowX':'auto'},
-                style_cell={'textAlign':'center','padding':'6px','fontSize':'12px',
-                            'fontFamily':'JetBrains Mono, monospace',
-                            'backgroundColor':'#fff','color':'#1E293B',
-                            'border':'1px solid #E2E8F0'},
-                style_header={'backgroundColor':'#E8F3EF','fontWeight':'600',
-                              'color':'#0B3B2F','border':'1px solid #CBD5E1',
-                              'fontSize':'0.7rem','letterSpacing':'0.05em'},
-                page_size=8)
-        ]) if not fa.empty else
-        dbc.Alert([html.I(className="fas fa-check-circle me-2"),
-                   "Sin alarmas — todos los valores dentro del rango esperado."],
-                  color="success")
+    condiciones = (
+        (df['Sobrevivencia'] > df['Máximo']) |
+        (df['Talla Comercial'] > df['Máximo']) |
+        (df['Ejes ≥ 2'] > df['Máximo']) |
+        (df['Ocup sustrato ≥ 80%'] > df['Máximo']) |
+        (df['Altura ≥ 12 cm'] > df['Máximo'])
     )
+    if '% Col' in df.columns:
+        condiciones = condiciones | (df['% Col'] > df['Máximo'])
 
-    # ========== METADATOS: se agrega la lectura del ID ==========
-    try:
-        meta = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=None)
-        # ID del lote (fila 5, columna A)
-        id_lote = meta.iloc[5,0] if meta.shape[0]>5 and meta.shape[1]>0 else "—"
-        # Fecha muestreo (fila 5, columna F)
-        fm = meta.iloc[5,5] if meta.shape[0]>5 and meta.shape[1]>5 else "—"
-        # Código de lote (fila 7, columna C)
-        lm = meta.iloc[7,2] if meta.shape[0]>7 and meta.shape[1]>2 else "—"
-        if isinstance(fm,(int,float)):
-            fm = (pd.to_datetime("1899-12-30")+pd.to_timedelta(int(fm),"D")).strftime('%d-%m-%Y')
-        elif hasattr(fm,'strftime'):
-            fm = fm.strftime('%d-%m-%Y')
-        else:
-            fm = str(fm)
-    except Exception:
-        id_lote = "—"
-        fm = "—"
-        lm = "—"
+    filas_alerta = df[condiciones]
 
-    # ========== KPI BAR con 6 celdas (agregamos ID) ==========
-    kpi = html.Div([
-        html.Div([
-            html.Div(f"{ts:.1f}%".replace('.',','), className="kpi-val"),
-            html.Div("Supervivencia", className="kpi-lbl")
-        ], className="kpi-cell"),
-        html.Div([
-            html.Div(f"{tc:.1f}%".replace('.',','), className="kpi-val amber"),
-            html.Div("Talla comercial", className="kpi-lbl")
-        ], className="kpi-cell"),
-        html.Div([
-            html.Div(f"{int(tot):,}".replace(",","."), className="kpi-val sage sm"),
-            html.Div("Macetas muestreadas", className="kpi-lbl")
-        ], className="kpi-cell"),
-        # Nueva celda para el ID
-        html.Div([
-            html.Div(str(id_lote), className="kpi-val sm"),
-            html.Div("ID", className="kpi-lbl")
-        ], className="kpi-cell"),
-        html.Div([
-            html.Div(str(lm), className="kpi-val sm"),
-            html.Div("Lote", className="kpi-lbl")
-        ], className="kpi-cell"),
-        html.Div([
-            html.Div(str(fm), className="kpi-val sky sm"),
-            html.Div("Fecha muestreo", className="kpi-lbl")
-        ], className="kpi-cell"),
-    ], className="kpi-bar")
-
-    tabla = html.Div([
-        html.Div("Datos registrados por fila", className="sec-lbl",
-                 style={"marginTop":"20px","marginBottom":"10px"}),
+    alerta = html.Div([
+        html.H5("⚠️ Alarmas detectadas:", style={"color": "red"}),
+        html.P(f"Se encontraron {len(filas_alerta)} filas con valores fuera de rango."),
         dash_table.DataTable(
-            data=df.to_dict('records'),
-            columns=[{'name':i,'id':i} for i in df.columns],
-            style_table={'overflowX':'auto'},
-            style_cell={'textAlign':'center','padding':'7px','fontSize':'12px',
-                        'fontFamily':'JetBrains Mono, monospace',
-                        'backgroundColor':'#fff','color':'#1E293B',
-                        'border':'1px solid #E2E8F0'},
-            style_header={'backgroundColor':'#E8F3EF','fontWeight':'600',
-                          'color':'#0B3B2F','border':'1px solid #CBD5E1',
-                          'fontSize':'0.7rem','letterSpacing':'0.05em',
-                          'textTransform':'uppercase'},
-            page_size=10)
+            data=filas_alerta.to_dict('records'),
+            columns=[{'name': i, 'id': i} for i in filas_alerta.columns],
+            style_table={'overflowX': 'auto', 'maxWidth': '100%'},
+            style_cell={'textAlign': 'center', 'padding': '5px', 'fontSize': '12px'},
+            style_header={'backgroundColor': 'lightgrey', 'fontWeight': 'bold'},
+            page_size=10
+        )
+    ]) if not filas_alerta.empty else html.Div([
+        html.H5("✅ No se detectaron alarmas.", style={"color": "green"})
     ])
 
-    filas_u = df['Fila'].tolist()
+    tabla = dash_table.DataTable(
+        data=df.to_dict('records'),
+        columns=[{'name': i, 'id': i} for i in df.columns],
+        style_table={'overflowX': 'auto', 'maxWidth': '100%'},
+        style_cell={'textAlign': 'center', 'padding': '5px', 'fontSize': '12px'},
+        style_header={'backgroundColor': 'lightgrey', 'fontWeight': 'bold'},
+        page_size=10
+    )
 
-    def graf(col, titulo, color, ylabel):
-        if col not in df.columns:
-            return {**ef}
-        fig = px.bar(df, x='Fila', y=col,
-                     labels={'Fila':'Fila', col: ylabel},
-                     color_discrete_sequence=[color])
-        fig.update_traces(text=df[col], textposition='outside',
-                          marker_color=color,
-                          marker_line_color="rgba(255,255,255,0.7)",
-                          marker_line_width=0.8, opacity=0.9)
-        lay = dict(PLOT_LAYOUT)
-        lay["title"] = {"text": titulo,
-                        "font":{"family":"Inter, sans-serif","color":"#0B3B2F","size":12}}
-        lay["xaxis"] = dict(PLOT_LAYOUT["xaxis"],
-                            tickmode='array', tickvals=filas_u,
-                            ticktext=filas_u, tickangle=-45)
-        lay["yaxis"] = dict(PLOT_LAYOUT["yaxis"], title=ylabel)
-        fig.update_layout(**lay)
+    filas_unicas = df['Fila'].tolist()
+
+    def crear_grafico(col_y, titulo, color, label_y):
+        if col_y not in df.columns or df[col_y].sum() == 0:
+            return px.bar(title=f"{titulo} - Datos no disponibles")
+        fig = px.bar(
+            df, x='Fila', y=col_y,
+            title=titulo,
+            labels={'Fila': 'Fila', col_y: label_y},
+            color_discrete_sequence=[color]
+        )
+        fig.update_traces(text=df[col_y], textposition='outside')
+        fig.update_layout(
+            xaxis=dict(tickmode='array', tickvals=filas_unicas, ticktext=filas_unicas, tickangle=-45),
+            xaxis_title="Fila", yaxis_title=label_y,
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(size=10), margin=dict(t=60, b=80, l=50, r=50),
+            height=400
+        )
         return fig
 
-    C = CHART_COLORS
-    return (html.Div(), opciones, alerta_ui, html.Div([kpi, tabla]),
-            graf('Sobrevivencia',       f'Supervivencia — {ts:.1f}%',   C[0], 'Plantas vivas'),
-            graf('Talla Comercial',     f'Talla Comercial — {tc:.1f}%', C[1], 'En talla comercial'),
-            graf('Ejes ≥ 2',            f'Ejes ≥ 2 — {tejs:.1f}%',     C[2], 'Con ejes ≥ 2'),
-            graf('Ocup sustrato ≥ 80%', f'Ocup. Sustrato — {tocu:.1f}%',C[3], 'Ocup ≥ 80%'),
-            graf('Altura ≥ 12 cm',      f'Altura ≥ 12 cm — {talt:.1f}%',C[4], 'Alt ≥ 12 cm'),
-            graf('% Col', f'% Col — {tcol:.1f}%', C[5], '% Col')
-            if df['% Col'].sum() > 0 else
-            {**ef, "layout":{**PLOT_LAYOUT,"title":{"text":"% Col — sin datos"}}})
+    fig_supervivencia = crear_grafico('Sobrevivencia', f'Supervivencia: {tasa_supervivencia:.2f}%', CHART_COLORS[0], 'Plantas Vivas')
+    fig_talla_comercial = crear_grafico('Talla Comercial', f'Talla Comercial: {tasa_talla_comercial:.2f}%', CHART_COLORS[1], 'Plantas en Talla Comercial')
+    fig_ejes = crear_grafico('Ejes ≥ 2', f'Ejes ≥ 2: {tasa_ejes:.2f}%', CHART_COLORS[2], 'Plantas con Ejes ≥ 2')
+    fig_ocupacion = crear_grafico('Ocup sustrato ≥ 80%', f'Ocupación Sustrato ≥ 80%: {tasa_ocupacion:.2f}%', CHART_COLORS[3], 'Plantas con Ocupación ≥ 80%')
+    fig_altura = crear_grafico('Altura ≥ 12 cm', f'Altura ≥ 12 cm: {tasa_altura:.2f}%', CHART_COLORS[4], 'Plantas con Altura ≥ 12 cm')
+
+    if '% Col' in df.columns and df['% Col'].sum() > 0:
+        fig_porcentaje_col = crear_grafico('% Col', f'% Col: {tasa_porcentaje_col:.2f}%', CHART_COLORS[5], 'Plantas con % Col')
+    else:
+        fig_porcentaje_col = px.bar(title="% Col no disponible en el archivo")
+
+    # Metadatos (ID, fecha, lote) desde posiciones fijas
+    try:
+        meta = pd.read_excel(BytesIO(decoded), sheet_name=sheet_name, header=None)
+        id_lote = meta.iloc[5, 0] if meta.shape[0] > 5 and meta.shape[1] > 0 else "—"
+        fecha_muestreo = meta.iloc[5, 5] if meta.shape[0] > 5 and meta.shape[1] > 5 else "—"
+        lote_meta = meta.iloc[7, 2] if meta.shape[0] > 7 and meta.shape[1] > 2 else "—"
+        if isinstance(fecha_muestreo, (int, float)):
+            fecha_muestreo = (pd.to_datetime("1899-12-30") + pd.to_timedelta(int(fecha_muestreo), "D")).strftime('%d-%m-%Y')
+        elif hasattr(fecha_muestreo, 'strftime'):
+            fecha_muestreo = fecha_muestreo.strftime('%d-%m-%Y')
+        else:
+            fecha_muestreo = str(fecha_muestreo)
+    except Exception:
+        id_lote = "—"
+        fecha_muestreo = "—"
+        lote_meta = "—"
+
+    # Barra de KPIs con ID
+    kpi_bar = html.Div(
+        style={'display': 'flex', 'justifyContent': 'space-around', 'backgroundColor': '#f8f9fa',
+               'padding': '15px', 'borderRadius': '10px', 'marginBottom': '20px'},
+        children=[
+            html.Div([html.H4(f"{tasa_supervivencia:.1f}%".replace('.',',')), html.P("Supervivencia")], style={'textAlign': 'center'}),
+            html.Div([html.H4(f"{tasa_talla_comercial:.1f}%".replace('.',',')), html.P("Talla comercial")], style={'textAlign': 'center'}),
+            html.Div([html.H4(f"{int(total_maximo):,}".replace(",",".")), html.P("Macetas muestreadas")], style={'textAlign': 'center'}),
+            html.Div([html.H4(str(id_lote)), html.P("ID")], style={'textAlign': 'center'}),
+            html.Div([html.H4(str(lote_meta)), html.P("Lote")], style={'textAlign': 'center'}),
+            html.Div([html.H4(str(fecha_muestreo)), html.P("Fecha muestreo")], style={'textAlign': 'center'})
+        ]
+    )
+
+    resumen = dbc.Container([
+        kpi_bar,
+        html.Div([
+            html.H5("Tabla de Datos", className="text-center text-primary mt-4"),
+            tabla
+        ], style={'overflowX': 'auto'})
+    ])
+
+    return {
+        "error": None,
+        "alerta": alerta,
+        "resumen": resumen,
+        "fig_supervivencia": fig_supervivencia,
+        "fig_talla_comercial": fig_talla_comercial,
+        "fig_ejes": fig_ejes,
+        "fig_ocupacion": fig_ocupacion,
+        "fig_altura": fig_altura,
+        "fig_porcentaje_col": fig_porcentaje_col
+    }
+
+
+# =============================================================================
+# CALLBACK PARA PROCESAR EL EXCEL Y GENERAR SUB‑PESTAÑAS (segunda pestaña)
+# =============================================================================
+@app.callback(
+    [Output('survival-upload-status', 'children'),
+     Output('survival-tabs-container', 'children')],
+    [Input('upload-data-survival', 'contents')],
+    [State('upload-data-survival', 'filename')]
+)
+def procesar_excel_completo(contents, filename):
+    if contents is None:
+        return html.Div(), html.Div()
+
+    content_type, content_string = contents.split(',')
+    decoded = base64.b64decode(content_string)
+
+    try:
+        excel_file = pd.ExcelFile(BytesIO(decoded))
+        hojas = excel_file.sheet_names
+    except Exception as e:
+        return dbc.Alert(f"Error al leer el archivo: {str(e)}", color="danger"), html.Div()
+
+    if not hojas:
+        return dbc.Alert("El archivo no contiene hojas.", color="warning"), html.Div()
+
+    tabs_children = []
+    for sheet in hojas:
+        resultado = procesar_hoja(decoded, sheet, filename)
+        if resultado["error"]:
+            tab_content = dbc.Alert(f"Error en hoja '{sheet}': {resultado['error']}", color="danger")
+        else:
+            tab_content = dbc.Container([
+                resultado["resumen"],
+                dbc.Row([
+                    dbc.Col(dcc.Graph(figure=resultado["fig_supervivencia"], config={'displayModeBar': False}), width=12, lg=4, className="mb-3"),
+                    dbc.Col(dcc.Graph(figure=resultado["fig_talla_comercial"], config={'displayModeBar': False}), width=12, lg=4, className="mb-3"),
+                    dbc.Col(dcc.Graph(figure=resultado["fig_ejes"], config={'displayModeBar': False}), width=12, lg=4, className="mb-3"),
+                ], className="g-3"),
+                dbc.Row([
+                    dbc.Col(dcc.Graph(figure=resultado["fig_ocupacion"], config={'displayModeBar': False}), width=12, lg=4, className="mb-3"),
+                    dbc.Col(dcc.Graph(figure=resultado["fig_altura"], config={'displayModeBar': False}), width=12, lg=4, className="mb-3"),
+                    dbc.Col(dcc.Graph(figure=resultado["fig_porcentaje_col"], config={'displayModeBar': False}), width=12, lg=4, className="mb-3"),
+                ], className="g-3"),
+                resultado["alerta"]
+            ], fluid=True)
+
+        tabs_children.append(
+            dcc.Tab(label=sheet, value=sheet, children=[tab_content])
+        )
+
+    tabs_component = dcc.Tabs(id="sheet-tabs", value=hojas[0], children=tabs_children, style={'marginTop': '20px'})
+    return dbc.Alert(f"Archivo '{filename}' cargado correctamente. {len(hojas)} hoja(s) procesada(s).", color="success"), tabs_component
 
 
 # =============================================================================
