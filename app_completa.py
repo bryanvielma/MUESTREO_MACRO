@@ -774,7 +774,7 @@ PLOT_LAYOUT = dict(
 )
 
 # Modern biotech palette for charts
-CHART_COLORS = ["#1A6D4C", "#2C7DA0", "#20B2AA", "#4A9E7A", "#0B3B2F", "#0288D1"]
+CHART_COLORS = ["#FFF700", "#C800FF", "#2900E0", "#FF0000", "#C6CCCA", "#00EAFB"]
 
 # =============================================================================
 # APP
@@ -806,7 +806,7 @@ app.layout = dbc.Container([
         html.Div([
             html.Div("🧬", className="header-icon"),
             html.Div([
-                html.H1("Sistema de Gestión de Muestreos"),
+                html.H1("Sistema de Gestión de Muestreos MACRO"),
                 html.P("Biotecnología Aplicada · Control de Calidad · Muestreo de Plantas",
                        className="tagline"),
             ], className="header-text"),
@@ -837,7 +837,7 @@ def render_tab(tab):
             ids_txt = ", ".join(str(i) for i in ids_excluidos)
             excl = dbc.Alert([
                 html.I(className="fas fa-info-circle me-2"),
-                f"IDs excluidos (Vivero Perú · MN): {ids_txt}"
+                f"IDs excluidos (Vivero los Viñedos · Perú ) ID's: {ids_txt}"
             ], color="warning", dismissable=True, style={"marginBottom":"16px"})
 
         n_lotes   = len(muestreos_hoy)
