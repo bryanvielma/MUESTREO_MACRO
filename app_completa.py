@@ -28,9 +28,9 @@ IMAGEN_RECORTADA = os.path.join(IMAGES_DIR, "imagen_recortada.jpg")
 # CARGA Y FILTRADO DE DATOS
 # =============================================================================
 if not os.path.exists(ARCHIVO_EXCEL):
-    raise FileNotFoundError(f"No se encontró {ARCHIVO_EXCEL}. Asegúrate de subir el archivo.")
+    raise FileNotFoundError(f"No se encontró {ARCHIVO_EXCEL}.")
 
-muestreos_hoy_raw = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Hoy")
+muestreos_hoy_raw      = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Hoy")
 muestreos_proximos_raw = pd.read_excel(ARCHIVO_EXCEL, sheet_name="Proximos")
 
 def es_lote_peru(row):
@@ -39,26 +39,21 @@ def es_lote_peru(row):
 
 hoy_date = datetime.now().date()
 if 'fecha_activadora' in muestreos_hoy_raw.columns:
-    muestreos_hoy_raw['fecha_activadora'] = pd.to_datetime(muestreos_hoy_raw['fecha_activadora'], errors='coerce')
-    mascara_fecha = muestreos_hoy_raw['fecha_activadora'].dt.date == hoy_date
-    muestreos_hoy_raw = muestreos_hoy_raw[mascara_fecha].copy()
+    muestreos_hoy_raw['fecha_activadora'] = pd.to_datetime(
+        muestreos_hoy_raw['fecha_activadora'], errors='coerce')
+    muestreos_hoy_raw = muestreos_hoy_raw[
+        muestreos_hoy_raw['fecha_activadora'].dt.date == hoy_date].copy()
 
-# Verificar existencia de columna 'ID' para evitar KeyError
-if 'ID' in muestreos_hoy_raw.columns:
-    ids_excluidos_hoy = muestreos_hoy_raw[muestreos_hoy_raw.apply(es_lote_peru, axis=1)]["ID"].tolist()
-else:
-    ids_excluidos_hoy = []
-    print("Advertencia: La hoja 'Hoy' no tiene columna 'ID'. Se asume lista vacía de excluidos.")
-
-ids_excluidos = sorted(set(ids_excluidos_hoy))
+ids_excluidos = sorted(set(
+    muestreos_hoy_raw[muestreos_hoy_raw.apply(es_lote_peru, axis=1)]["ID"].tolist()
+))
 
 def filtrar_sin_mn(df):
     if 'I-M-C' not in df.columns:
         return df
-    mask = df.apply(lambda row: not es_lote_peru(row), axis=1)
-    return df[mask].copy()
+    return df[df.apply(lambda r: not es_lote_peru(r), axis=1)].copy()
 
-muestreos_hoy = filtrar_sin_mn(muestreos_hoy_raw)
+muestreos_hoy      = filtrar_sin_mn(muestreos_hoy_raw)
 muestreos_proximos = filtrar_sin_mn(muestreos_proximos_raw)
 
 for df in [muestreos_hoy, muestreos_proximos]:
@@ -81,15 +76,12 @@ def generar_datos_lote(lote):
     imc_raw = lote.get("I-M-C", "")
     if pd.isna(imc_raw):
         imc_raw = ""
-
     cantidad = extraer_cantidad_desde_imc(str(imc_raw))
     if cantidad == 0:
         cantidad = lote.get("Macetas actuales", 0)
         cantidad = int(cantidad) if not pd.isna(cantidad) else 0
     else:
         cantidad = int(cantidad)
-
-    imc_val = imc_raw
     bandejas_val = lote.get("Bandeja", 0)
     if pd.isna(bandejas_val):
         bandejas_val = 0
@@ -100,7 +92,6 @@ def generar_datos_lote(lote):
     vol_match = re.search(r'(\d+(?:[.,]\d+)?)\s*L', str(macetero_raw))
     if vol_match:
         litros = float(vol_match.group(1).replace(",", "."))
-
     hileras = 20
 
     def calcular_tamano(c):
@@ -113,16 +104,18 @@ def generar_datos_lote(lote):
         return 1260
 
     muestra_tamano = calcular_tamano(cantidad)
-    rows_count = max(cantidad // hileras, 1)
-    full_rows = muestra_tamano // hileras
-    remainder = muestra_tamano % hileras
-    rows_needed = full_rows + (1 if remainder > 0 else 0)
+    rows_count     = max(cantidad // hileras, 1)
+    full_rows      = muestra_tamano // hileras
+    remainder      = muestra_tamano % hileras
+    rows_needed    = full_rows + (1 if remainder > 0 else 0)
 
     seed = int(hashlib.sha256(str(lote["Código"]).encode()).hexdigest(), 16) % (10**6)
     np.random.seed(seed)
-    spacing = max(rows_count // rows_needed, 1)
+    spacing      = max(rows_count // rows_needed, 1)
     primera_fila = np.random.randint(1, spacing + 1)
-    chosen_rows = sorted(set(min(primera_fila + i * spacing, rows_count) for i in range(rows_needed)))
+    chosen_rows  = sorted(set(
+        min(primera_fila + i * spacing, rows_count) for i in range(rows_needed)
+    ))
 
     rows = []
     muestra_num = 1
@@ -130,47 +123,47 @@ def generar_datos_lote(lote):
         start_plant = (r_idx - 1) * hileras + 1
         if (i == len(chosen_rows) - 1) and remainder > 0:
             for off_p in range(remainder):
-                rows.append({"Muestra": muestra_num, "Número Planta": start_plant + off_p, "Fila": r_idx})
+                rows.append({"Muestra": muestra_num,
+                              "Número Planta": start_plant + off_p,
+                              "Fila": r_idx})
                 muestra_num += 1
         else:
             for off_p in range(hileras):
-                rows.append({"Muestra": muestra_num, "Número Planta": start_plant + off_p, "Fila": r_idx})
+                rows.append({"Muestra": muestra_num,
+                              "Número Planta": start_plant + off_p,
+                              "Fila": r_idx})
                 muestra_num += 1
 
     if not rows:
         raise ValueError("No se generaron datos de muestra.")
 
     return {
-        "tabla_df": pd.DataFrame(rows),
-        "lote": lote,
-        "cantidad": cantidad,
-        "imc_val": imc_val,
-        "bandejas_val": bandejas_val,
-        "litros": litros,
+        "tabla_df": pd.DataFrame(rows), "lote": lote,
+        "cantidad": cantidad, "imc_val": imc_raw,
+        "bandejas_val": bandejas_val, "litros": litros,
         "muestra_tamano": muestra_tamano
     }
 
 def escribir_hoja(workbook, datos, nombre_hoja):
-    worksheet = workbook.add_worksheet(nombre_hoja[:31])
-    fmt_bold = workbook.add_format({'bold': True, 'border': 1, 'align': 'center', 'valign': 'vcenter'})
-    fmt_norm = workbook.add_format({'border': 1, 'align': 'center', 'valign': 'vcenter', 'font_size': 10})
-    fmt_center = workbook.add_format({'align': 'center', 'valign': 'vcenter', 'font_size': 10, 'bold': True})
-    fmt_small = workbook.add_format({'border': 1, 'align': 'center', 'valign': 'vcenter', 'font_size': 9})
-
-    start_row = 4
-    lote = datos["lote"]
-    tabla_df = datos["tabla_df"]
-    cantidad = datos["cantidad"]
-    imc_val = datos["imc_val"]
+    worksheet    = workbook.add_worksheet(nombre_hoja[:31])
+    fmt_bold     = workbook.add_format({'bold':True,'border':1,'align':'center','valign':'vcenter'})
+    fmt_norm     = workbook.add_format({'border':1,'align':'center','valign':'vcenter','font_size':10})
+    fmt_center   = workbook.add_format({'align':'center','valign':'vcenter','font_size':10,'bold':True})
+    fmt_small    = workbook.add_format({'border':1,'align':'center','valign':'vcenter','font_size':9})
+    start_row    = 4
+    lote         = datos["lote"]
+    tabla_df     = datos["tabla_df"]
+    cantidad     = datos["cantidad"]
+    imc_val      = datos["imc_val"]
     bandejas_val = datos["bandejas_val"]
-    litros = datos["litros"]
+    litros       = datos["litros"]
 
     info = {
-        "ID": lote.get("ID", "N/A"),
-        "Fecha Inicial": lote.get("Fecha", "").strftime('%d-%m-%Y') if pd.notnull(lote.get("Fecha")) else "N/A",
-        "Especie": lote.get("Especie", "N/A"),
-        "Variedad": lote.get("Variedad", "N/A"),
-        "Muestreo": lote.get("muestreo_activador", "N/A"),
+        "ID": lote.get("ID","N/A"),
+        "Fecha Inicial": lote.get("Fecha","").strftime('%d-%m-%Y') if pd.notnull(lote.get("Fecha")) else "N/A",
+        "Especie": lote.get("Especie","N/A"),
+        "Variedad": lote.get("Variedad","N/A"),
+        "Muestreo": lote.get("muestreo_activador","N/A"),
         "Fecha Muestreo": lote["fecha_activadora"].strftime('%d-%m-%Y') if pd.notnull(lote.get("fecha_activadora")) else "N/A",
         "Alveolos": cantidad,
         "Muestra": len(tabla_df)
@@ -178,31 +171,30 @@ def escribir_hoja(workbook, datos, nombre_hoja):
     for col, (key, val) in enumerate(info.items()):
         worksheet.write(start_row, col, key, fmt_bold)
         worksheet.write(start_row+1, col, val, fmt_norm)
-    worksheet.set_row(start_row, 15)
-    worksheet.set_row(start_row+1, 12)
+    worksheet.set_row(start_row, 15); worksheet.set_row(start_row+1, 12)
     start_row += 2
 
-    worksheet.write(start_row, 0, "Bandeja", fmt_bold)
-    worksheet.write(start_row, 1, "Vol. Sustrato (L)", fmt_bold)
-    worksheet.write(start_row, 2, "Código", fmt_bold)
-    worksheet.write(start_row+1, 0, bandejas_val, fmt_norm)
-    worksheet.write(start_row+1, 1, f"{litros:.2f}", fmt_norm)
-    worksheet.write(start_row+1, 2, lote["Código"], fmt_norm)
-    worksheet.set_row(start_row, 12)
-    worksheet.set_row(start_row+1, 12)
+    worksheet.write(start_row,0,"Bandeja",fmt_bold)
+    worksheet.write(start_row,1,"Vol. Sustrato (L)",fmt_bold)
+    worksheet.write(start_row,2,"Código",fmt_bold)
+    worksheet.write(start_row+1,0,bandejas_val,fmt_norm)
+    worksheet.write(start_row+1,1,f"{litros:.2f}",fmt_norm)
+    worksheet.write(start_row+1,2,lote["Código"],fmt_norm)
+    worksheet.set_row(start_row,12); worksheet.set_row(start_row+1,12)
     start_row += 2
 
-    worksheet.merge_range(f'D{start_row-1}:H{start_row-1}', 'INVERNADERO - MESÓN - CANTIDAD (I-M-C)', fmt_bold)
+    worksheet.merge_range(f'D{start_row-1}:H{start_row-1}',
+                          'INVERNADERO - MESÓN - CANTIDAD (I-M-C)', fmt_bold)
     worksheet.merge_range(f'D{start_row}:H{start_row}', str(imc_val), fmt_norm)
-    worksheet.set_row(start_row-1, 12)
-    worksheet.set_row(start_row, 12)
+    worksheet.set_row(start_row-1,12); worksheet.set_row(start_row,12)
     start_row += 2
 
-    worksheet.set_row(8, 5)
-    header_row = 9
+    worksheet.set_row(8,5)
+    header_row    = 9
     filas_resumen = tabla_df.groupby("Fila").size().reset_index(name="Cantidad de Repeticiones")
-    cols_vacias = ["Sobrevivencia", "Ejes ≥ 2", "Ocup sustrato ≥ 80%", "Altura ≥ 12 cm", "Talla Comercial", "% Col"]
-    all_cols = ["Fila", "Máximo"] + cols_vacias
+    cols_vacias   = ["Sobrevivencia","Ejes ≥ 2","Ocup sustrato ≥ 80%",
+                     "Altura ≥ 12 cm","Talla Comercial","% Col"]
+    all_cols = ["Fila","Máximo"] + cols_vacias
     for c, name in enumerate(all_cols):
         worksheet.write(header_row, c, name, fmt_bold)
     worksheet.set_row(header_row, 12)
@@ -215,558 +207,1032 @@ def escribir_hoja(workbook, datos, nombre_hoja):
         worksheet.set_row(data_row+idx, 11)
     last_data = data_row + len(filas_resumen) - 1
 
-    blank = last_data + 1
-    worksheet.set_row(blank, 5)
+    blank = last_data + 1; worksheet.set_row(blank, 5)
     resp_row = blank + 1
-    worksheet.merge_range(f'A{resp_row+1}:D{resp_row+1}', 'Responsable: _________________________________________________', fmt_center)
-    worksheet.merge_range(f'F{resp_row+1}:H{resp_row+1}', 'Fecha: ______ /______ /_________', fmt_center)
-    worksheet.write(f'E{resp_row+1}', 'Firma: ___________', fmt_center)
+    worksheet.merge_range(f'A{resp_row+1}:D{resp_row+1}',
+                          'Responsable: _________________________________________________', fmt_center)
+    worksheet.merge_range(f'F{resp_row+1}:H{resp_row+1}',
+                          'Fecha: ______ /______ /_________', fmt_center)
+    worksheet.write(f'E{resp_row+1}','Firma: ___________', fmt_center)
     worksheet.set_row(resp_row, 12)
 
-    blank2 = resp_row + 1
-    worksheet.set_row(blank2, 5)
+    blank2 = resp_row + 1; worksheet.set_row(blank2, 5)
     pct_row = blank2 + 1
-    worksheet.merge_range(f'A{pct_row+1}:B{pct_row+1}', '% PLANTAS PLANTABLES', fmt_small)
-    worksheet.write(f'C{pct_row+1}', '', fmt_small)
-    worksheet.merge_range(f'F{pct_row+1}:G{pct_row+1}', '% TALLA COMERCIAL', fmt_small)
-    worksheet.write(f'H{pct_row+1}', '', fmt_small)
+    worksheet.merge_range(f'A{pct_row+1}:B{pct_row+1}','% PLANTAS PLANTABLES', fmt_small)
+    worksheet.write(f'C{pct_row+1}','', fmt_small)
+    worksheet.merge_range(f'F{pct_row+1}:G{pct_row+1}','% TALLA COMERCIAL', fmt_small)
+    worksheet.write(f'H{pct_row+1}','', fmt_small)
     worksheet.set_row(pct_row, 10)
 
-    worksheet.merge_range('A1:B2', '', fmt_bold)
+    worksheet.merge_range('A1:B2','', fmt_bold)
     if os.path.exists(IMAGEN_RECORTADA):
-        worksheet.insert_image('A1', IMAGEN_RECORTADA, {
-            'x_scale': 30/45, 'y_scale': 22/65, 'x_offset': 12, 'y_offset': 5, 'positioning': 1
-        })
-    titulo = workbook.add_format({'align': 'center', 'valign': 'vcenter', 'font_name': 'Comic Sans MS', 'font_size': 11, 'text_wrap': True, 'border': 1})
-    worksheet.merge_range('C1:E2', 'Sociedad de Investigación, Desarrollo y Servicios de Biotecnología Aplicada Ltda.', titulo)
-    cell_fmt = workbook.add_format({'align': 'center', 'valign': 'vcenter', 'font_name': 'Arial', 'font_size': 10, 'text_wrap': True, 'border': 1})
-    worksheet.write('F1', 'RAC-XXX', cell_fmt)
-    worksheet.write('G1', 'POE XXX', cell_fmt)
-    worksheet.write('F2', 'Edición 00', cell_fmt)
-    worksheet.write('G2', 'Pág. 1 de 1', cell_fmt)
-    titulo2 = workbook.add_format({'align': 'center', 'valign': 'vcenter', 'font_name': 'Arial', 'font_size': 11, 'text_wrap': True, 'border': 1})
-    worksheet.merge_range('A3:E3', 'REGISTRO PARA EL CONTROL DE LA TALLA COMERCIAL EN MACRO', titulo2)
-    worksheet.write('F3', 'Vigente: 01/ 01/2025', cell_fmt)
-    worksheet.write('G3', 'Folio:', cell_fmt)
-
+        worksheet.insert_image('A1', IMAGEN_RECORTADA,
+            {'x_scale':30/45,'y_scale':22/65,'x_offset':12,'y_offset':5,'positioning':1})
+    titulo = workbook.add_format({'align':'center','valign':'vcenter',
+                                   'font_name':'Comic Sans MS','font_size':11,
+                                   'text_wrap':True,'border':1})
+    worksheet.merge_range('C1:E2',
+        'Sociedad de Investigación, Desarrollo y Servicios de Biotecnología Aplicada Ltda.',titulo)
+    cell_fmt = workbook.add_format({'align':'center','valign':'vcenter',
+                                     'font_name':'Arial','font_size':10,'text_wrap':True,'border':1})
+    worksheet.write('F1','RAC-XXX',cell_fmt); worksheet.write('G1','POE XXX',cell_fmt)
+    worksheet.write('F2','Edición 00',cell_fmt); worksheet.write('G2','Pág. 1 de 1',cell_fmt)
+    titulo2 = workbook.add_format({'align':'center','valign':'vcenter',
+                                    'font_name':'Arial','font_size':11,'text_wrap':True,'border':1})
+    worksheet.merge_range('A3:E3',
+        'REGISTRO PARA EL CONTROL DE LA TALLA COMERCIAL EN MACRO', titulo2)
+    worksheet.write('F3','Vigente: 01/ 01/2025',cell_fmt)
+    worksheet.write('G3','Folio:',cell_fmt)
     for col, w in [('A',8),('B',13),('C',23),('D',12),('E',18),('F',18),('G',13),('H',9)]:
         worksheet.set_column(f'{col}:{col}', w)
     worksheet.set_row(3, 5)
 
 # =============================================================================
-# APP DASH CON PESTAÑAS CORREGIDAS
+# BIOTECH LABORATORY CSS - Modern, clean, no cream colors
 # =============================================================================
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
-server = app.server
-app.title = "MACRO - Muestreo y Supervivencia"
+CUSTOM_CSS = """
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-# Cargar Google Fonts, Font Awesome y estilos personalizados
-app.index_string = '''
-<!DOCTYPE html>
-<html>
-    <head>
-        {%metas%}
-        <title>{%title%}</title>
-        {%favicon%}
-        {%css%}
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-        <style>
-            body { font-family: 'Inter', sans-serif; background-color: #f4f6f9; }
-            .custom-tabs { border-bottom: 2px solid #20c997; margin-bottom: 10px; }
-            .custom-tab {
-                background-color: #f8f9fa;
-                border-radius: 10px 10px 0 0 !important;
-                padding: 10px 20px !important;
-                font-weight: 500;
-                transition: all 0.2s;
-                border: none;
-                margin-right: 5px;
-                color: #495057;
-            }
-            .custom-tab:hover { background-color: #e9ecef; cursor: pointer; }
-            .custom-tab--selected { background-color: #20c997 !important; color: white !important; border-bottom: 2px solid #20c997 !important; }
-            .btn-success { background: linear-gradient(135deg, #28a745, #20c997); border: none; transition: all 0.2s; }
-            .btn-success:hover { background: linear-gradient(135deg, #218838, #1aa179); transform: scale(1.02); }
-            .btn-primary { background: linear-gradient(135deg, #0d6efd, #0b5ed7); border: none; }
-            .btn-primary:hover { background: linear-gradient(135deg, #0b5ed7, #0a58ca); transform: scale(1.02); }
-            .card-accent { border-top: 4px solid #20c997 !important; border-radius: 12px !important; }
-            .tab-content { background-color: white; border-radius: 0 0 15px 15px; padding: 20px; box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); }
-            .card-hover { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
-            .card-hover:hover { transform: translateY(-5px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important; }
-            .upload-area { transition: all 0.2s; }
-            .upload-area:hover { background-color: #e9ecef !important; border-color: #1aa179 !important; }
-            .footer { font-size: 0.85rem; }
-        </style>
-    </head>
-    <body>
-        {%app_entry%}
-        <footer>{%config%}{%scripts%}{%renderer%}</footer>
-    </body>
-</html>
-'''
+:root {
+  --bg-page:         #F4F7FB;
+  --surface:         #FFFFFF;
+  --primary-dark:    #0B3B2F;
+  --primary:         #1A6D4C;
+  --primary-light:   #4A9E7A;
+  --primary-bglight: #E8F3EF;
+  --accent-blue:     #2C7DA0;
+  --accent-blue-bg:  #EAF4F8;
+  --accent-teal:     #20B2AA;
+  --gray-50:         #F8FAFC;
+  --gray-100:        #F1F5F9;
+  --gray-200:        #E2E8F0;
+  --gray-300:        #CBD5E1;
+  --gray-600:        #475569;
+  --gray-700:        #334155;
+  --gray-800:        #1E293B;
+  --success:         #2E7D32;
+  --warning:         #ED6C02;
+  --error:           #D32F2F;
+  --info:            #0288D1;
+  --border-light:    #E2E8F0;
+  --shadow-sm:       0 1px 2px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+  --shadow-md:       0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+  --shadow-lg:       0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.025);
+  --radius-sm:       6px;
+  --radius-md:       12px;
+  --radius-lg:       18px;
+}
 
-# Navbar
-navbar = dbc.Navbar(
-    dbc.Container([
-        html.A(
-            dbc.Row([
-                dbc.Col(
-                    html.Img(src="/assets/logo.png", height="40px") 
-                    if os.path.exists(os.path.join(BASE_DIR, "assets", "logo.png")) 
-                    else html.I(className="fas fa-leaf fa-2x text-success"),
-                    width="auto"
-                ),
-                dbc.Col(dbc.NavbarBrand("SynergiaBio - MACRO", className="ms-2 fw-bold"), width="auto"),
-            ], align="center", className="g-0"),
-            href="#", style={"textDecoration": "none"}
-        ),
-        dbc.NavbarToggler(id="navbar-toggler"),
-        dbc.Collapse(
-            dbc.Nav([dbc.NavItem(dbc.NavLink([html.I(className="fas fa-question-circle me-1"), "Ayuda"], href="#"))], className="ms-auto"),
-            id="navbar-collapse", navbar=True
-        )
-    ]),
-    color="light", dark=False, className="mb-3 shadow-sm"
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  background: var(--bg-page) !important;
+  color: var(--gray-700) !important;
+  font-family: 'Inter', sans-serif !important;
+  min-height: 100vh;
+}
+
+body::before {
+  display: none;
+}
+
+.container-fluid {
+  position: relative;
+  z-index: 1;
+}
+
+/* HEADER */
+.app-header {
+  padding: 32px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.header-icon {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-md);
+}
+
+.header-text h1 {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 1.7rem !important;
+  color: var(--gray-800) !important;
+  letter-spacing: -0.01em;
+  margin: 0 !important;
+}
+
+.header-text .tagline {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-top: 5px;
+}
+
+.header-divider {
+  margin-top: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--accent-blue) 70%, transparent 100%);
+  opacity: 0.6;
+}
+
+/* TABS */
+.dash-tabs {
+  border-bottom: 2px solid var(--border-light) !important;
+  background: transparent !important;
+  margin-top: 22px !important;
+}
+
+.dash-tab {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 500 !important;
+  font-size: 0.85rem !important;
+  color: var(--gray-600) !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  padding: 10px 24px !important;
+  margin-bottom: -2px !important;
+  transition: all 0.2s ease !important;
+}
+
+.dash-tab:hover {
+  color: var(--primary) !important;
+  border-bottom-color: var(--primary-light) !important;
+  background: rgba(26,109,76,0.04) !important;
+}
+
+.dash-tab--selected {
+  color: var(--primary) !important;
+  font-weight: 600 !important;
+  border-bottom: 2px solid var(--primary) !important;
+  background: transparent !important;
+}
+
+/* CARDS */
+.card {
+  background: var(--surface) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: box-shadow 0.2s ease, transform 0.1s ease !important;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md) !important;
+}
+
+.card-header {
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--border-light) !important;
+  padding: 14px 20px !important;
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase !important;
+  color: var(--primary) !important;
+}
+
+.card-body {
+  background: var(--surface) !important;
+  color: var(--gray-700) !important;
+}
+
+.border-forest { border-left: 3px solid var(--primary) !important; }
+.border-amber  { border-left: 3px solid var(--accent-teal) !important; }
+.border-sage   { border-left: 3px solid var(--primary-light) !important; }
+.border-terra  { border-left: 3px solid var(--accent-blue) !important; }
+
+/* KPI BAR */
+.kpi-bar {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.kpi-cell {
+  flex: 1;
+  padding: 16px 12px;
+  border-right: 1px solid var(--border-light);
+  text-align: center;
+}
+
+.kpi-cell:last-child {
+  border-right: none;
+}
+
+.kpi-val {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 1.6rem;
+  color: var(--gray-800);
+  line-height: 1.2;
+}
+
+.kpi-val.amber { color: var(--accent-teal); }
+.kpi-val.sage  { color: var(--primary-light); }
+.kpi-val.sky   { color: var(--accent-blue); }
+.kpi-val.sm    { font-size: 1rem; }
+
+.kpi-lbl {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gray-600);
+  margin-top: 6px;
+}
+
+/* LOTE LIST */
+.lote-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.lote-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  transition: background 0.15s;
+}
+
+.lote-list li:hover {
+  background: var(--primary-bglight);
+}
+
+.lote-badge {
+  display: inline-block;
+  background: var(--primary-bglight);
+  color: var(--primary-dark);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 30px;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+}
+
+.lote-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--gray-800);
+}
+
+.lote-var {
+  font-size: 0.75rem;
+  color: var(--gray-600);
+  font-style: italic;
+}
+
+/* BUTTONS */
+.btn-primary {
+  background: var(--primary) !important;
+  border: none !important;
+  border-radius: var(--radius-sm) !important;
+  color: white !important;
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 0.03em !important;
+  padding: 10px 22px !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+  transition: background 0.2s, box-shadow 0.2s !important;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark) !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.btn-success {
+  background: transparent !important;
+  border: 1.5px solid var(--primary) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--primary) !important;
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 0.03em !important;
+  padding: 9px 22px !important;
+  transition: all 0.2s !important;
+}
+
+.btn-success:hover {
+  background: var(--primary) !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(26,109,76,0.2) !important;
+}
+
+/* ALERTS */
+.alert {
+  border-radius: var(--radius-sm) !important;
+  font-size: 0.8rem !important;
+  font-family: 'Inter', sans-serif !important;
+  border: none !important;
+  padding: 12px 16px !important;
+}
+
+.alert-warning {
+  background: #FFF8E7 !important;
+  color: #B45309 !important;
+  border-left: 3px solid var(--warning) !important;
+}
+
+.alert-info {
+  background: var(--accent-blue-bg) !important;
+  color: var(--accent-blue) !important;
+  border-left: 3px solid var(--accent-blue) !important;
+}
+
+.alert-success {
+  background: var(--primary-bglight) !important;
+  color: var(--primary-dark) !important;
+  border-left: 3px solid var(--primary) !important;
+}
+
+.alert-danger {
+  background: #FEF2F2 !important;
+  color: var(--error) !important;
+  border-left: 3px solid var(--error) !important;
+}
+
+/* UPLOAD ZONE */
+.upload-zone {
+  border: 2px dashed var(--gray-300) !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--gray-50) !important;
+  color: var(--gray-600) !important;
+  font-size: 0.85rem !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer;
+}
+
+.upload-zone:hover {
+  border-color: var(--primary) !important;
+  background: var(--primary-bglight) !important;
+  color: var(--primary) !important;
+}
+
+/* DROPDOWN */
+.Select-control {
+  background: var(--surface) !important;
+  border: 1px solid var(--gray-300) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.Select-menu-outer {
+  background: var(--surface) !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.Select-option {
+  background: var(--surface) !important;
+  color: var(--gray-700) !important;
+}
+
+.Select-option:hover,
+.VirtualizedSelectFocusedOption {
+  background: var(--primary-bglight) !important;
+  color: var(--primary-dark) !important;
+}
+
+.Select-value-label {
+  color: var(--gray-800) !important;
+  font-weight: 500 !important;
+}
+
+.Select-placeholder {
+  color: var(--gray-600) !important;
+}
+
+/* DATA TABLE */
+.dash-header {
+  background: var(--primary-bglight) !important;
+  color: var(--primary-dark) !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+}
+
+.dash-cell {
+  background: var(--surface) !important;
+  color: var(--gray-700) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 0.75rem !important;
+  border-color: var(--border-light) !important;
+}
+
+.dash-cell:hover {
+  background: var(--gray-100) !important;
+}
+
+/* SECTION LABEL */
+.sec-lbl {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gray-600);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sec-lbl::before {
+  content: '';
+  width: 14px;
+  height: 2px;
+  background: var(--primary-light);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.sec-lbl::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-light);
+}
+
+/* LOG BOX */
+.log-box {
+  background: var(--gray-50);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--gray-600);
+  min-height: 62px;
+}
+
+.log-ok {
+  color: var(--primary);
+}
+
+.log-warn {
+  color: var(--warning);
+}
+
+.log-error {
+  color: var(--error);
+}
+
+/* STATUS DOT */
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  margin-right: 8px;
+  vertical-align: middle;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.95); }
+}
+
+/* CHART WRAPPER */
+.chart-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.chart-wrap:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400);
+}
+"""
+
+# ── PLOTLY TEMPLATE ──────────────────────────────────────────────────────────
+PLOT_LAYOUT = dict(
+    plot_bgcolor="rgba(248,250,252,0.8)",
+    paper_bgcolor="rgba(0,0,0,0)",
+    font=dict(family="Inter, sans-serif", color="#475569", size=10),
+    title_font=dict(family="Inter, sans-serif", color="#0B3B2F", size=12),
+    xaxis=dict(gridcolor="rgba(203,213,225,0.4)", linecolor="rgba(203,213,225,0.6)",
+               tickcolor="rgba(203,213,225,0.6)", zerolinecolor="rgba(203,213,225,0.3)"),
+    yaxis=dict(gridcolor="rgba(203,213,225,0.4)", linecolor="rgba(203,213,225,0.6)",
+               tickcolor="rgba(203,213,225,0.6)", zerolinecolor="rgba(203,213,225,0.3)"),
+    margin=dict(t=50, b=70, l=50, r=20),
+    height=350,
+    legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#475569")),
 )
 
-# Footer
-footer = html.Footer(
-    dbc.Container([
-        html.Hr(),
-        html.P([html.I(className="fas fa-copyright me-1"), "2025 SynergiaBio - Todos los derechos reservados"], 
-               className="text-center text-muted small"),
-        html.P([html.I(className="fas fa-envelope me-1"), " soporte@synergiabio.com"], 
-               className="text-center text-muted small")
-    ]),
-    className="mt-5 footer"
+# Modern biotech palette for charts
+CHART_COLORS = ["#1A6D4C", "#2C7DA0", "#20B2AA", "#4A9E7A", "#0B3B2F", "#0288D1"]
+
+# =============================================================================
+# APP
+# =============================================================================
+app = dash.Dash(
+    __name__,
+    external_stylesheets=[
+        dbc.themes.BOOTSTRAP,
+        "https://use.fontawesome.com/releases/v5.15.4/css/all.css",
+    ]
 )
 
+app.index_string = (
+    '<!DOCTYPE html><html><head>{%metas%}'
+    '<title>MACRO · Gestión de Muestreos</title>{%favicon%}{%css%}'
+    '<style>' + CUSTOM_CSS + '</style>'
+    '</head><body>{%app_entry%}'
+    '<footer>{%config%}{%scripts%}{%renderer%}</footer>'
+    '</body></html>'
+)
+
+server    = app.server
+app.title = "MACRO · Gestión de Muestreos"
+
+# ── LAYOUT ──────────────────────────────────────────────────────────────────
 app.layout = dbc.Container([
-    navbar,
-    html.H1([html.I(className="fas fa-chart-line me-2"), "Sistema de Gestión de Muestreos"], 
-            className="text-center my-3 text-primary"),
-    dcc.Tabs(
-        id="tabs",
-        value="tab-muestra",
-        parent_className="custom-tabs",
-        className="mb-3",
-        children=[
-            dcc.Tab(label="📊 Cálculo de Tamaño de Muestra", value="tab-muestra",
-                    className="custom-tab", selected_className="custom-tab--selected"),
-            dcc.Tab(label="📈 Análisis de Supervivencia", value="tab-supervivencia",
-                    className="custom-tab", selected_className="custom-tab--selected"),
-        ]
-    ),
-    html.Div(id="tab-content", className="tab-content"),
-    footer
-], fluid=True)
+
+    html.Div([
+        html.Div([
+            html.Div("🧬", className="header-icon"),
+            html.Div([
+                html.H1("Sistema de Gestión de Muestreos"),
+                html.P("Biotecnología Aplicada · Control de Calidad · Muestreo de Plantas",
+                       className="tagline"),
+            ], className="header-text"),
+        ], className="app-header"),
+        html.Div(className="header-divider"),
+    ]),
+
+    dcc.Tabs(id="tabs", value="tab-muestra", children=[
+        dcc.Tab(label="📊  Cálculo de Muestra",       value="tab-muestra"),
+        dcc.Tab(label="📈  Análisis de Supervivencia", value="tab-supervivencia"),
+    ]),
+
+    html.Div(id="tab-content", style={"paddingTop":"24px","paddingBottom":"48px"})
+
+], fluid=True, style={"maxWidth":"1360px","margin":"0 auto","padding":"0 28px"})
+
 
 # =============================================================================
-# CALLBACK PARA RENDERIZAR EL CONTENIDO DE CADA PESTAÑA
+# TAB ROUTING
 # =============================================================================
-@app.callback(
-    Output("tab-content", "children"),
-    Input("tabs", "value")
-)
+@app.callback(Output("tab-content","children"), Input("tabs","value"))
 def render_tab(tab):
+
     if tab == "tab-muestra":
-        mensaje_exclusion = None
+
+        excl = None
         if ids_excluidos:
-            ids_texto = ", ".join(str(id_) for id_ in ids_excluidos)
-            mensaje_exclusion = dbc.Alert(
-                [html.I(className="fas fa-exclamation-triangle me-2"), 
-                 f"⚠️ Los siguientes IDs corresponden a lotes en Vivero los Viñedos (PERÚ) no se incluyen en los muestreos de hoy: {ids_texto}"],
-                color="warning", dismissable=True, className="shadow-sm rounded-3"
-            )
-        info_lotes = html.Div()
+            ids_txt = ", ".join(str(i) for i in ids_excluidos)
+            excl = dbc.Alert([
+                html.I(className="fas fa-info-circle me-2"),
+                f"IDs excluidos (Vivero Perú · MN): {ids_txt}"
+            ], color="warning", dismissable=True, style={"marginBottom":"16px"})
+
+        n_lotes   = len(muestreos_hoy)
+        n_plantas = int(muestreos_hoy['Macetas actuales'].sum()) \
+                    if 'Macetas actuales' in muestreos_hoy.columns else 0
+
+        kpi = html.Div([
+            html.Div([
+                html.Div(str(n_lotes), className="kpi-val"),
+                html.Div("Lotes activos hoy", className="kpi-lbl"),
+            ], className="kpi-cell"),
+            html.Div([
+                html.Div(f"{n_plantas:,}".replace(",","."), className="kpi-val amber"),
+                html.Div("Plantas totales", className="kpi-lbl"),
+            ], className="kpi-cell"),
+            html.Div([
+                html.Div(datetime.now().strftime("%d · %m · %Y"),
+                         className="kpi-val sage sm"),
+                html.Div("Fecha de muestreo", className="kpi-lbl"),
+            ], className="kpi-cell"),
+            html.Div([
+                html.Div([html.Span(className="dot"), "Activo"],
+                         className="kpi-val sm",
+                         style={"display":"flex","alignItems":"center","justifyContent":"center"}),
+                html.Div("Estado del sistema", className="kpi-lbl"),
+            ], className="kpi-cell"),
+        ], className="kpi-bar")
+
         if not muestreos_hoy.empty:
-            info_lotes = dbc.Card(
-                dbc.CardBody([
-                    html.H5([html.I(className="fas fa-list me-2"), f"Lotes a muestrear hoy ({len(muestreos_hoy)}):"], 
-                            className="card-title text-success"),
-                    html.Ul([html.Li(f"{row['Código']} - {row.get('Variedad', '')} (ID: {row['ID'] if 'ID' in row else 'N/A'})") 
-                             for _, row in muestreos_hoy.iterrows()], className="mb-0")
-                ]), 
-                className="shadow-sm border-0 rounded-4 mb-3 card-hover card-accent"
-            )
+            items = [
+                html.Li([
+                    html.Span(f"ID {row['ID']}", className="lote-badge"),
+                    html.Span(str(row['Código']), className="lote-code"),
+                    html.Span(f"— {row.get('Variedad','')}", className="lote-var"),
+                ]) for _, row in muestreos_hoy.iterrows()
+            ]
+            lotes_ui = dbc.Card([
+                dbc.CardHeader([
+                    html.I(className="fas fa-seedling me-2"),
+                    f"Lotes programados hoy  ·  {n_lotes} registros"
+                ]),
+                dbc.CardBody(
+                    html.Ul(items, className="lote-list"),
+                    style={"maxHeight":"290px","overflowY":"auto","padding":"10px 14px"}
+                )
+            ], className="border-forest", style={"marginBottom":"20px"})
         else:
-            info_lotes = dbc.Alert([html.I(className="fas fa-info-circle me-2"), "No hay lotes programados para hoy (sin MN)."], 
-                                   color="info", className="shadow-sm rounded-3")
-        
-        return dbc.Row([
-            dbc.Col([
-                mensaje_exclusion if mensaje_exclusion else html.Div(),
-                info_lotes,
-                dbc.Spinner(
-                    dbc.Button([html.I(className="fas fa-file-excel me-2"), "Generar Excel de muestreo hoy"], 
-                               id="btn-generar-multiple", color="success", 
-                               className="w-100 mb-3 shadow-sm rounded-3 py-2 fw-bold",
-                               title="Genera un archivo Excel con una hoja por cada lote de hoy"),
-                    color="success", size="sm", spinner_style={"width": "1.5rem", "height": "1.5rem"}
-                ),
-                html.A([html.I(className="fas fa-download me-2"), "Descargar Excel"], 
-                       id="btn-descargar-multiple", href="", download="", 
-                       className="btn btn-primary w-100 mb-3 shadow-sm rounded-3 py-2 fw-bold",
-                       title="Descarga el archivo Excel generado"),
-                dbc.Card([
-                    dbc.CardHeader([html.I(className="fas fa-info-circle me-2"), "Resultado de la generación"], 
-                                   className="bg-primary text-white fw-bold"),
-                    dbc.CardBody(html.Div(id="resultado-multiple"))
-                ], className="shadow-lg border-0 rounded-4 mt-2 card-accent"),
-            ], width=12, lg=8, className="mx-auto")
-        ])
-    
-    else:  # tab-supervivencia
+            lotes_ui = dbc.Alert("Sin lotes activos para hoy.", color="info",
+                                  style={"marginBottom":"16px"})
+
+        acc_row = dbc.Row([
+            dbc.Col(dbc.Button([html.I(className="fas fa-file-excel me-2"),
+                                "Generar Excel de muestreo"],
+                               id="btn-generar-multiple", color="primary",
+                               className="w-100"), md=5),
+            dbc.Col(html.A([html.I(className="fas fa-download me-2"), "Descargar Excel"],
+                           id="btn-descargar-multiple", href="", download="",
+                           className="btn btn-success w-100"), md=5),
+        ], className="g-3 mb-4")
+
+        log_card = dbc.Card([
+            dbc.CardHeader([html.I(className="fas fa-terminal me-2"), "Registro de operación"]),
+            dbc.CardBody(
+                html.Div("Presiona 'Generar Excel' para iniciar el procesamiento de lotes.",
+                         id="resultado-multiple", className="log-box"),
+            )
+        ], className="border-sage")
+
+        return html.Div([excl or html.Div(), kpi, lotes_ui, acc_row, log_card])
+
+    else:
         return dbc.Container([
             dbc.Row([
                 dbc.Col([
-                    html.Div(id="upload-filename", className="text-center text-muted mt-2"),
+                    html.Div("Cargar archivo de resultados", className="sec-lbl"),
                     dcc.Upload(
                         id='upload-data',
                         children=html.Div([
-                            html.I(className="fas fa-cloud-upload-alt fa-3x mb-2", style={"color": "#20c997"}),
-                            html.P("Arrastra y suelta o ", className="mb-0"),
-                            html.A("Selecciona un archivo Excel", className="fw-bold text-success")
-                        ], style={"textAlign": "center"}),
-                        style={
-                            'width': '100%', 'height': '140px', 'lineHeight': '1.5',
-                            'borderWidth': '2px', 'borderStyle': 'dashed', 'borderRadius': '20px',
-                            'borderColor': '#20c997', 'backgroundColor': '#f8f9fa',
-                            'textAlign': 'center', 'margin': '10px', 'padding': '20px'
-                        },
-                        className="upload-area",
-                        multiple=False
+                            html.I(className="fas fa-file-upload me-2",
+                                   style={"color":"var(--primary)"}),
+                            "Arrastra el Excel aquí o ",
+                            html.Span("haz clic para explorar",
+                                      style={"color":"var(--primary)","fontWeight":"600",
+                                             "textDecoration":"underline"}),
+                        ]),
+                        style={'width':'100%','height':'66px','lineHeight':'66px',
+                               'textAlign':'center','cursor':'pointer'},
+                        className="upload-zone", multiple=False
                     ),
-                    html.Div(id='selector-hoja-wrapper', style={'marginTop': '20px'}),
-                    dcc.Dropdown(id='selector-hoja', placeholder="Seleccione una hoja...", 
-                                 className="mb-3 shadow-sm rounded-3", 
-                                 style={'borderRadius': '10px', 'border': '1px solid #20c997'}),
-                    html.Div(id='output-alertas', style={'marginTop': '20px'}),
-                    html.Div(id='output-data-upload', style={'marginTop': '20px'}),
-                ], width=12, lg=10, className="mx-auto")
-            ]),
+                ], md=7),
+                dbc.Col([
+                    html.Div("Hoja de análisis", className="sec-lbl"),
+                    html.Div(id='selector-hoja-wrapper'),
+                    dcc.Dropdown(id='selector-hoja',
+                                 placeholder="Seleccione una hoja…",
+                                 style={"borderRadius":"6px","fontSize":"0.84rem"}),
+                ], md=5,
+                   style={"display":"flex","flexDirection":"column","justifyContent":"flex-end"}),
+            ], className="g-4 mb-4"),
+
+            html.Div(id='output-alertas',    style={"marginBottom":"16px"}),
+            html.Div(id='output-data-upload',style={"marginBottom":"24px"}),
+
+            html.Div("Indicadores de calidad por fila", className="sec-lbl",
+                     style={"marginBottom":"14px"}),
+
             dbc.Row([
-                dbc.Col(dcc.Graph(id="grafico-supervivencia", config={'displayModeBar': False}), 
-                        width=12, lg=4, className="mb-3"),
-                dbc.Col(dcc.Graph(id="grafico-talla-comercial", config={'displayModeBar': False}), 
-                        width=12, lg=4, className="mb-3"),
-                dbc.Col(dcc.Graph(id="grafico-ejes", config={'displayModeBar': False}), 
-                        width=12, lg=4, className="mb-3"),
-            ], className="g-3"),
+                dbc.Col(html.Div(dcc.Graph(id="grafico-supervivencia",
+                                           config={'displayModeBar':False}),
+                                 className="chart-wrap"), md=4),
+                dbc.Col(html.Div(dcc.Graph(id="grafico-talla-comercial",
+                                           config={'displayModeBar':False}),
+                                 className="chart-wrap"), md=4),
+                dbc.Col(html.Div(dcc.Graph(id="grafico-ejes",
+                                           config={'displayModeBar':False}),
+                                 className="chart-wrap"), md=4),
+            ], className="g-3 mb-3"),
+
             dbc.Row([
-                dbc.Col(dcc.Graph(id="grafico-ocupacion", config={'displayModeBar': False}), 
-                        width=12, lg=4, className="mb-3"),
-                dbc.Col(dcc.Graph(id="grafico-altura", config={'displayModeBar': False}), 
-                        width=12, lg=4, className="mb-3"),
-                dbc.Col(dcc.Graph(id="grafico-porcentaje-col", config={'displayModeBar': False}), 
-                        width=12, lg=4, className="mb-3"),
-            ], className="g-3"),
+                dbc.Col(html.Div(dcc.Graph(id="grafico-ocupacion",
+                                           config={'displayModeBar':False}),
+                                 className="chart-wrap"), md=4),
+                dbc.Col(html.Div(dcc.Graph(id="grafico-altura",
+                                           config={'displayModeBar':False}),
+                                 className="chart-wrap"), md=4),
+                dbc.Col(html.Div(dcc.Graph(id="grafico-porcentaje-col",
+                                           config={'displayModeBar':False}),
+                                 className="chart-wrap"), md=4),
+            ], className="g-3 mb-4"),
         ], fluid=True)
 
+
 # =============================================================================
-# CALLBACK PARA GENERAR EXCEL MÚLTIPLE (PESTAÑA 1)
+# CALLBACK GENERAR EXCEL
 # =============================================================================
 @app.callback(
-    [Output("btn-descargar-multiple", "href"),
-     Output("btn-descargar-multiple", "download"),
-     Output("resultado-multiple", "children")],
-    Input("btn-generar-multiple", "n_clicks"),
+    [Output("btn-descargar-multiple","href"),
+     Output("btn-descargar-multiple","download"),
+     Output("resultado-multiple","children")],
+    Input("btn-generar-multiple","n_clicks"),
     prevent_initial_call=True
 )
 def generar_excel_multiple(n_clicks):
     if not n_clicks:
-        return "", "", "Presione el botón para generar el Excel."
+        return "", "", "En espera…"
     if muestreos_hoy.empty:
-        return "", "", "No hay lotes para muestrear hoy (todos contienen MN o no hay datos)."
-    
-    fecha_str = datetime.now().strftime("%d-%m-%Y")
+        return "", "", html.Span("Sin lotes disponibles para hoy.", className="log-warn")
+
+    fecha_str    = datetime.now().strftime("%d-%m-%Y")
     nombre_excel = f"MUESTREOS_MACRO_{fecha_str}.xlsx"
-    output = BytesIO()
-    workbook = xlsxwriter.Workbook(output)
-    
-    lotes_procesados = []
-    errores = []
+    output       = BytesIO()
+    workbook     = xlsxwriter.Workbook(output)
+    lotes_ok = []; errores = []
+
     for _, lote in muestreos_hoy.iterrows():
         try:
-            datos = generar_datos_lote(lote)
+            datos  = generar_datos_lote(lote)
             codigo = str(lote["Código"])
-            muestreo_activador = lote.get("muestreo_activador", "")
-            if pd.notna(muestreo_activador):
-                dias_str = str(muestreo_activador).strip()
-                dias_clean = re.sub(r'\s+', '_', dias_str)
-                nombre_hoja_base = f"{codigo}_{dias_clean}"
-            else:
-                nombre_hoja_base = codigo
-            nombre_hoja = re.sub(r'[\\/*?:\[\]]', '_', nombre_hoja_base)[:31]
-            escribir_hoja(workbook, datos, nombre_hoja)
-            lotes_procesados.append(codigo)
+            m_act  = lote.get("muestreo_activador","")
+            base   = f"{codigo}_{re.sub(r'\\s+','_',str(m_act).strip())}" if pd.notna(m_act) else codigo
+            nombre = re.sub(r'[\\/*?:\[\]]','_', base)[:31]
+            escribir_hoja(workbook, datos, nombre)
+            lotes_ok.append(codigo)
         except Exception as e:
-            errores.append(f"{lote.get('Código')}: {str(e)}")
-    
-    workbook.close()
-    output.seek(0)
-    excel_data = base64.b64encode(output.read()).decode("utf-8")
-    href = f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{excel_data}"
-    
-    resultado = html.Div([
-        html.P([html.I(className="fas fa-check-circle text-success me-2"), 
-                f"✅ Excel generado correctamente con {len(lotes_procesados)} hoja(s)."]),
-        html.P([html.I(className="fas fa-tag me-2"), 
-                f"Lotes incluidos: {', '.join(lotes_procesados)}"]),
-    ])
+            errores.append(f"{lote.get('Código')}: {e}")
+
+    workbook.close(); output.seek(0)
+    href = ("data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,"
+            + base64.b64encode(output.read()).decode())
+
+    lines = [
+        html.Div(f"✔  Proceso completado · {len(lotes_ok)} hoja(s) generadas",
+                 className="log-ok", style={"marginBottom":"5px","fontWeight":"500"}),
+        html.Div(f"Lotes procesados: {', '.join(lotes_ok)}",
+                 style={"color":"var(--gray-600)"}),
+    ]
     if errores:
-        resultado.children.append(html.P([html.I(className="fas fa-exclamation-triangle text-danger me-2"), 
-                                          f"❌ Errores en: {', '.join(errores)}"], style={"color": "red"}))
-    return href, nombre_excel, resultado
+        lines.append(html.Div(f"✗  Errores: {', '.join(errores)}",
+                               className="log-error", style={"marginTop":"6px"}))
+    return href, nombre_excel, html.Div(lines, className="log-box")
+
 
 # =============================================================================
-# CALLBACK PARA SUPERVIVENCIA (CON ID INCLUIDO EN LA TARJETA)
+# CALLBACK SUPERVIVENCIA (MODIFICADO PARA INCLUIR EL ID)
 # =============================================================================
 @app.callback(
-    [Output('selector-hoja-wrapper', 'children'),
-     Output('selector-hoja', 'options'),
-     Output('output-alertas', 'children'),
-     Output('output-data-upload', 'children'),
-     Output('grafico-supervivencia', 'figure'),
-     Output('grafico-talla-comercial', 'figure'),
-     Output('grafico-ejes', 'figure'),
-     Output('grafico-ocupacion', 'figure'),
-     Output('grafico-altura', 'figure'),
-     Output('grafico-porcentaje-col', 'figure')],
-    [Input('upload-data', 'contents'),
-     Input('selector-hoja', 'value')],
-    [State('upload-data', 'filename')]
+    [Output('selector-hoja-wrapper','children'),
+     Output('selector-hoja','options'),
+     Output('output-alertas','children'),
+     Output('output-data-upload','children'),
+     Output('grafico-supervivencia','figure'),
+     Output('grafico-talla-comercial','figure'),
+     Output('grafico-ejes','figure'),
+     Output('grafico-ocupacion','figure'),
+     Output('grafico-altura','figure'),
+     Output('grafico-porcentaje-col','figure')],
+    [Input('upload-data','contents'), Input('selector-hoja','value')],
+    [State('upload-data','filename')]
 )
 def procesar_archivo_con_hoja(contents, hoja_seleccionada, filename):
-    empty_fig = {}
-    if contents is None:
-        return "", [], html.Div(["Por favor, carga un archivo Excel."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+    ef = {"layout": {**PLOT_LAYOUT,
+                     "title":{"text":"Sin datos · carga un archivo",
+                               "font":{"color":"#94A3B8"}}}}
 
-    content_type, content_string = contents.split(',')
-    decoded = base64.b64decode(content_string)
+    if contents is None:
+        msg = html.Div(
+            [html.I(className="fas fa-leaf me-2", style={"color":"var(--primary-light)"}),
+             "Carga un archivo Excel para comenzar el análisis."],
+            style={"textAlign":"center","padding":"28px","color":"var(--gray-500)",
+                   "fontSize":"0.85rem","background":"var(--gray-50)",
+                   "border":"1px dashed var(--gray-300)","borderRadius":"var(--radius-md)"}
+        )
+        return "", [], msg, None, ef, ef, ef, ef, ef, ef
+
+    _, cs = contents.split(',')
+    decoded = base64.b64decode(cs)
 
     try:
-        excel_file = pd.ExcelFile(BytesIO(decoded))
-        hojas = excel_file.sheet_names
+        hojas = pd.ExcelFile(BytesIO(decoded)).sheet_names
     except Exception as e:
-        return "", [], html.Div([f"Error al leer el archivo: {str(e)}"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return "", [], dbc.Alert(f"Error: {e}", color="danger"), None, ef,ef,ef,ef,ef,ef
 
-    if hoja_seleccionada is None:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"], 
-                        className="fw-bold text-primary"), opciones, None, None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+    opciones = [{'label': h, 'value': h} for h in hojas]
 
-    if hoja_seleccionada not in hojas:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"], 
-                        className="fw-bold text-primary"), opciones, html.Div(["Hoja no válida"], className="text-danger"), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+    if hoja_seleccionada is None or hoja_seleccionada not in hojas:
+        return html.Div(), opciones, None, None, ef,ef,ef,ef,ef,ef
 
     try:
         df_raw = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=None)
     except Exception as e:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"], 
-                        className="fw-bold text-primary"), opciones, html.Div([f"Error al leer la hoja: {str(e)}"]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div(), opciones, dbc.Alert(f"Error: {e}", color="danger"), None, ef,ef,ef,ef,ef,ef
 
-    header_row_idx = None
-    for i in range(len(df_raw)):
-        if df_raw.iloc[i, 0] == 'Fila':
-            header_row_idx = i
-            break
+    hri = next((i for i in range(len(df_raw)) if df_raw.iloc[i,0] == 'Fila'), None)
+    if hri is None:
+        return html.Div(), opciones, \
+               dbc.Alert("No se encontró el encabezado 'Fila'.", color="warning"), \
+               None, ef,ef,ef,ef,ef,ef
 
-    if header_row_idx is None:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"], 
-                        className="fw-bold text-primary"), opciones, html.Div(["No se encontró la fila de encabezado 'Fila' en esta hoja."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
-
-    df = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=header_row_idx)
-
-    df['Fila_temp'] = df['Fila'].astype(str).str.strip()
-    mask_fila_valida = df['Fila_temp'].str.match(r'^\d+(\.\d+)?$', na=False)
-    df = df[mask_fila_valida].copy()
-    df.drop(columns=['Fila_temp'], inplace=True)
+    df = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=hri)
+    df['_t'] = df['Fila'].astype(str).str.strip()
+    df = df[df['_t'].str.match(r'^\d+(\.\d+)?$', na=False)].drop(columns=['_t']).copy()
 
     if df.empty:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"], 
-                        className="fw-bold text-primary"), opciones, html.Div(["No se encontraron filas de datos numéricos en la tabla."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return html.Div(), opciones, \
+               dbc.Alert("Sin filas numéricas válidas.", color="warning"), \
+               None, ef,ef,ef,ef,ef,ef
 
-    columnas_numericas = ['Máximo', 'Sobrevivencia', 'Talla Comercial', 'Ejes ≥ 2',
-                          'Ocup sustrato ≥ 80%', 'Altura ≥ 12 cm']
-    for col in columnas_numericas:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-        else:
-            df[col] = 0
+    for c in ['Máximo','Sobrevivencia','Talla Comercial','Ejes ≥ 2',
+              'Ocup sustrato ≥ 80%','Altura ≥ 12 cm','% Col']:
+        df[c] = pd.to_numeric(df.get(c, 0), errors='coerce').fillna(0)
 
-    if '% Col' in df.columns:
-        df['% Col'] = pd.to_numeric(df['% Col'], errors='coerce')
-        columnas_numericas.append('% Col')
-    else:
-        df['% Col'] = 0
-
-    df[columnas_numericas] = df[columnas_numericas].fillna(0)
     df['Fila'] = pd.to_numeric(df['Fila'], errors='coerce').fillna(0).astype(int).astype(str)
 
-    if 'Máximo' not in df.columns:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"], 
-                        className="fw-bold text-primary"), opciones, html.Div(["Columna 'Máximo' no encontrada."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+    tot = df['Máximo'].sum()
+    if tot == 0:
+        return html.Div(), opciones, \
+               dbc.Alert("Total Máximo = 0, no se puede calcular.", color="danger"), \
+               None, ef,ef,ef,ef,ef,ef
 
-    total_maximo = df['Máximo'].sum()
-    if total_maximo == 0:
-        opciones = [{'label': h, 'value': h} for h in hojas]
-        return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"], 
-                        className="fw-bold text-primary"), opciones, html.Div(["El total de 'Máximo' es cero, no se puede calcular porcentajes."]), None, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+    def pct(c): return (df[c].sum() / tot) * 100
 
-    total_sobrevivencia = df['Sobrevivencia'].sum()
-    tasa_supervivencia = (total_sobrevivencia / total_maximo) * 100
-    total_talla_comercial = df['Talla Comercial'].sum()
-    tasa_talla_comercial = (total_talla_comercial / total_maximo) * 100
-    total_ejes = df['Ejes ≥ 2'].sum()
-    tasa_ejes = (total_ejes / total_maximo) * 100
-    total_ocupacion = df['Ocup sustrato ≥ 80%'].sum()
-    tasa_ocupacion = (total_ocupacion / total_maximo) * 100
-    total_altura = df['Altura ≥ 12 cm'].sum()
-    tasa_altura = (total_altura / total_maximo) * 100
+    ts = pct('Sobrevivencia'); tc = pct('Talla Comercial'); tejs = pct('Ejes ≥ 2')
+    tocu = pct('Ocup sustrato ≥ 80%'); talt = pct('Altura ≥ 12 cm')
+    tcol = pct('% Col') if df['% Col'].sum() > 0 else 0
 
-    if '% Col' in df.columns and df['% Col'].sum() > 0:
-        total_porcentaje_col = df['% Col'].sum()
-        tasa_porcentaje_col = (total_porcentaje_col / total_maximo) * 100
-    else:
-        tasa_porcentaje_col = 0
+    # Alarmas
+    cond = ((df['Sobrevivencia']>df['Máximo'])|(df['Talla Comercial']>df['Máximo'])|
+            (df['Ejes ≥ 2']>df['Máximo'])|(df['Ocup sustrato ≥ 80%']>df['Máximo'])|
+            (df['Altura ≥ 12 cm']>df['Máximo'])|(df['% Col']>df['Máximo']))
+    fa = df[cond]
 
-    condiciones = (
-        (df['Sobrevivencia'] > df['Máximo']) |
-        (df['Talla Comercial'] > df['Máximo']) |
-        (df['Ejes ≥ 2'] > df['Máximo']) |
-        (df['Ocup sustrato ≥ 80%'] > df['Máximo']) |
-        (df['Altura ≥ 12 cm'] > df['Máximo'])
+    alerta_ui = (
+        html.Div([
+            dbc.Alert([html.I(className="fas fa-exclamation-triangle me-2"),
+                       f"{len(fa)} fila(s) con valores fuera de rango"],
+                      color="warning", style={"marginBottom":"10px"}),
+            dash_table.DataTable(
+                data=fa.to_dict('records'),
+                columns=[{'name':i,'id':i} for i in fa.columns],
+                style_table={'overflowX':'auto'},
+                style_cell={'textAlign':'center','padding':'6px','fontSize':'12px',
+                            'fontFamily':'JetBrains Mono, monospace',
+                            'backgroundColor':'#fff','color':'#1E293B',
+                            'border':'1px solid #E2E8F0'},
+                style_header={'backgroundColor':'#E8F3EF','fontWeight':'600',
+                              'color':'#0B3B2F','border':'1px solid #CBD5E1',
+                              'fontSize':'0.7rem','letterSpacing':'0.05em'},
+                page_size=8)
+        ]) if not fa.empty else
+        dbc.Alert([html.I(className="fas fa-check-circle me-2"),
+                   "Sin alarmas — todos los valores dentro del rango esperado."],
+                  color="success")
     )
-    if '% Col' in df.columns and '% Col' in df:
-        condiciones = condiciones | (df['% Col'] > df['Máximo'])
 
-    filas_alerta = df[condiciones]
+    # ========== METADATOS: se agrega la lectura del ID ==========
+    try:
+        meta = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=None)
+        # ID del lote (fila 5, columna A)
+        id_lote = meta.iloc[5,0] if meta.shape[0]>5 and meta.shape[1]>0 else "—"
+        # Fecha muestreo (fila 5, columna F)
+        fm = meta.iloc[5,5] if meta.shape[0]>5 and meta.shape[1]>5 else "—"
+        # Código de lote (fila 7, columna C)
+        lm = meta.iloc[7,2] if meta.shape[0]>7 and meta.shape[1]>2 else "—"
+        if isinstance(fm,(int,float)):
+            fm = (pd.to_datetime("1899-12-30")+pd.to_timedelta(int(fm),"D")).strftime('%d-%m-%Y')
+        elif hasattr(fm,'strftime'):
+            fm = fm.strftime('%d-%m-%Y')
+        else:
+            fm = str(fm)
+    except Exception:
+        id_lote = "—"
+        fm = "—"
+        lm = "—"
 
-    alerta = html.Div([
-        html.H5([html.I(className="fas fa-bell text-warning me-2"), "Alarmas detectadas:"], 
-                style={"color": "#dc3545"}),
-        html.P(f"Se encontraron {len(filas_alerta)} filas con valores fuera de rango."),
+    # ========== KPI BAR con 6 celdas (agregamos ID) ==========
+    kpi = html.Div([
+        html.Div([
+            html.Div(f"{ts:.1f}%".replace('.',','), className="kpi-val"),
+            html.Div("Supervivencia", className="kpi-lbl")
+        ], className="kpi-cell"),
+        html.Div([
+            html.Div(f"{tc:.1f}%".replace('.',','), className="kpi-val amber"),
+            html.Div("Talla comercial", className="kpi-lbl")
+        ], className="kpi-cell"),
+        html.Div([
+            html.Div(f"{int(tot):,}".replace(",","."), className="kpi-val sage sm"),
+            html.Div("Macetas muestreadas", className="kpi-lbl")
+        ], className="kpi-cell"),
+        # Nueva celda para el ID
+        html.Div([
+            html.Div(str(id_lote), className="kpi-val sm"),
+            html.Div("ID", className="kpi-lbl")
+        ], className="kpi-cell"),
+        html.Div([
+            html.Div(str(lm), className="kpi-val sm"),
+            html.Div("Lote", className="kpi-lbl")
+        ], className="kpi-cell"),
+        html.Div([
+            html.Div(str(fm), className="kpi-val sky sm"),
+            html.Div("Fecha muestreo", className="kpi-lbl")
+        ], className="kpi-cell"),
+    ], className="kpi-bar")
+
+    tabla = html.Div([
+        html.Div("Datos registrados por fila", className="sec-lbl",
+                 style={"marginTop":"20px","marginBottom":"10px"}),
         dash_table.DataTable(
-            data=filas_alerta.to_dict('records'),
-            columns=[{'name': i, 'id': i} for i in filas_alerta.columns],
-            style_table={'overflowX': 'auto', 'maxWidth': '100%'},
-            style_cell={'textAlign': 'center', 'padding': '5px', 'fontSize': '12px'},
-            style_header={'backgroundColor': '#20c997', 'fontWeight': 'bold', 'color': 'white'},
-            page_size=10,
-            className="shadow-sm rounded-3"
-        )
-    ]) if not filas_alerta.empty else html.Div([
-        html.H5([html.I(className="fas fa-check-circle text-success me-2"), "No se detectaron alarmas."], 
-                style={"color": "#198754"})
+            data=df.to_dict('records'),
+            columns=[{'name':i,'id':i} for i in df.columns],
+            style_table={'overflowX':'auto'},
+            style_cell={'textAlign':'center','padding':'7px','fontSize':'12px',
+                        'fontFamily':'JetBrains Mono, monospace',
+                        'backgroundColor':'#fff','color':'#1E293B',
+                        'border':'1px solid #E2E8F0'},
+            style_header={'backgroundColor':'#E8F3EF','fontWeight':'600',
+                          'color':'#0B3B2F','border':'1px solid #CBD5E1',
+                          'fontSize':'0.7rem','letterSpacing':'0.05em',
+                          'textTransform':'uppercase'},
+            page_size=10)
     ])
 
-    tabla = dash_table.DataTable(
-        data=df.to_dict('records'),
-        columns=[{'name': i, 'id': i} for i in df.columns],
-        style_table={'overflowX': 'auto', 'maxWidth': '100%'},
-        style_cell={'textAlign': 'center', 'padding': '5px', 'fontSize': '12px'},
-        style_header={'backgroundColor': '#20c997', 'fontWeight': 'bold', 'color': 'white'},
-        page_size=10,
-        className="shadow-sm rounded-3"
-    )
+    filas_u = df['Fila'].tolist()
 
-    filas_unicas = df['Fila'].tolist()
-
-    def crear_grafico(col_y, titulo, color, label_y):
-        if col_y not in df.columns:
-            return px.bar(title=f"{titulo} - Columna no encontrada")
-        fig = px.bar(
-            df, x='Fila', y=col_y,
-            title=titulo,
-            labels={'Fila': 'Fila', col_y: label_y},
-            color_discrete_sequence=[color],
-            template="plotly_white"
-        )
-        fig.update_traces(text=df[col_y], textposition='outside', marker_line_color='rgba(0,0,0,0.2)', marker_line_width=1)
-        fig.update_layout(
-            xaxis=dict(tickmode='array', tickvals=filas_unicas, ticktext=filas_unicas, tickangle=-45,
-                       showgrid=True, gridwidth=0.5, gridcolor='#e9ecef'),
-            yaxis=dict(showgrid=True, gridwidth=0.5, gridcolor='#e9ecef'),
-            xaxis_title="Fila", yaxis_title=label_y,
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            font=dict(size=10), margin=dict(t=60, b=80, l=50, r=50),
-            height=400,
-            title_font_size=14,
-            title_x=0.5
-        )
+    def graf(col, titulo, color, ylabel):
+        if col not in df.columns:
+            return {**ef}
+        fig = px.bar(df, x='Fila', y=col,
+                     labels={'Fila':'Fila', col: ylabel},
+                     color_discrete_sequence=[color])
+        fig.update_traces(text=df[col], textposition='outside',
+                          marker_color=color,
+                          marker_line_color="rgba(255,255,255,0.7)",
+                          marker_line_width=0.8, opacity=0.9)
+        lay = dict(PLOT_LAYOUT)
+        lay["title"] = {"text": titulo,
+                        "font":{"family":"Inter, sans-serif","color":"#0B3B2F","size":12}}
+        lay["xaxis"] = dict(PLOT_LAYOUT["xaxis"],
+                            tickmode='array', tickvals=filas_u,
+                            ticktext=filas_u, tickangle=-45)
+        lay["yaxis"] = dict(PLOT_LAYOUT["yaxis"], title=ylabel)
+        fig.update_layout(**lay)
         return fig
 
-    fig_supervivencia = crear_grafico('Sobrevivencia', f'Supervivencia: {tasa_supervivencia:.2f}%', '#2c7fb8', 'Plantas Vivas')
-    fig_talla_comercial = crear_grafico('Talla Comercial', f'Talla Comercial: {tasa_talla_comercial:.2f}%', '#ff7f0e', 'Plantas en Talla Comercial')
-    fig_ejes = crear_grafico('Ejes ≥ 2', f'Ejes ≥ 2: {tasa_ejes:.2f}%', '#2ca02c', 'Plantas con Ejes ≥ 2')
-    fig_ocupacion = crear_grafico('Ocup sustrato ≥ 80%', f'Ocupación Sustrato ≥ 80%: {tasa_ocupacion:.2f}%', '#d62728', 'Plantas con Ocupación ≥ 80%')
-    fig_altura = crear_grafico('Altura ≥ 12 cm', f'Altura ≥ 12 cm: {tasa_altura:.2f}%', '#9467bd', 'Plantas con Altura ≥ 12 cm')
+    C = CHART_COLORS
+    return (html.Div(), opciones, alerta_ui, html.Div([kpi, tabla]),
+            graf('Sobrevivencia',       f'Supervivencia — {ts:.1f}%',   C[0], 'Plantas vivas'),
+            graf('Talla Comercial',     f'Talla Comercial — {tc:.1f}%', C[1], 'En talla comercial'),
+            graf('Ejes ≥ 2',            f'Ejes ≥ 2 — {tejs:.1f}%',     C[2], 'Con ejes ≥ 2'),
+            graf('Ocup sustrato ≥ 80%', f'Ocup. Sustrato — {tocu:.1f}%',C[3], 'Ocup ≥ 80%'),
+            graf('Altura ≥ 12 cm',      f'Altura ≥ 12 cm — {talt:.1f}%',C[4], 'Alt ≥ 12 cm'),
+            graf('% Col', f'% Col — {tcol:.1f}%', C[5], '% Col')
+            if df['% Col'].sum() > 0 else
+            {**ef, "layout":{**PLOT_LAYOUT,"title":{"text":"% Col — sin datos"}}})
 
-    if '% Col' in df.columns and df['% Col'].sum() > 0:
-        fig_porcentaje_col = crear_grafico('% Col', f'% Col: {tasa_porcentaje_col:.2f}%', '#8c564b', 'Plantas con % Col')
-    else:
-        fig_porcentaje_col = px.bar(title="% Col no disponible en el archivo", template="plotly_white")
 
-    # --- LECTURA DE METADATOS (incluyendo ID) ---
-    try:
-        metadata_df = pd.read_excel(BytesIO(decoded), sheet_name=hoja_seleccionada, header=None)
-        # Fecha muestreo: fila 6, columna F (iloc[5,5])
-        fecha_muestreo = metadata_df.iloc[5, 5] if metadata_df.shape[0] > 5 and metadata_df.shape[1] > 5 else "No disponible"
-        # ID del lote: fila 6, columna A (iloc[5,0])
-        id_lote = metadata_df.iloc[5, 0] if metadata_df.shape[0] > 5 and metadata_df.shape[1] > 0 else "No disponible"
-        # Código del lote: fila 8, columna C (iloc[7,2])
-        lote = metadata_df.iloc[7, 2] if metadata_df.shape[0] > 7 and metadata_df.shape[1] > 2 else "No disponible"
-        
-        if isinstance(fecha_muestreo, str):
-            fecha_muestreo = pd.to_datetime(fecha_muestreo, format="%d-%m-%Y", errors="raise")
-        elif isinstance(fecha_muestreo, (int, float)):
-            fecha_muestreo = pd.to_datetime("1899-12-30") + pd.to_timedelta(int(fecha_muestreo), unit="D")
-        fecha_muestreo = fecha_muestreo.strftime('%d-%m-%Y')
-    except Exception:
-        fecha_muestreo = "No disponible"
-        id_lote = "No disponible"
-        lote = "No disponible"
-
-    # Tarjeta de resumen con el ID incluido
-    resumen = dbc.Card(
-        dbc.CardBody([
-            html.H5([html.I(className="fas fa-file-excel me-2"), f"Archivo cargado: {filename}"], 
-                    className="text-center text-primary mb-4"),
-            html.P([html.I(className="fas fa-table me-2"), f"Hoja seleccionada: {hoja_seleccionada}"], 
-                   className="text-center mb-2"),
-            html.P([html.I(className="fas fa-id-card me-2"), f"ID del lote: {id_lote}"],      # ← NUEVO: ID
-                   className="text-center mb-2"),
-            html.P([html.I(className="fas fa-tag me-2"), f"Código: {lote}"], 
-                   className="text-center mb-2"),
-            html.P([html.I(className="fas fa-calendar-alt me-2"), f"Fecha Muestreo: {fecha_muestreo}"], 
-                   className="text-center mb-2"),
-            html.P([html.I(className="fas fa-seedling me-2"), f"N° macetas muestreo: {int(total_maximo):,}".replace(",", ".")], 
-                   className="text-center mb-2"),
-            html.P([html.I(className="fas fa-heartbeat me-2"), f"% plantas vivas: {tasa_supervivencia:.2f}%".replace('.', ',')], 
-                   className="text-center mb-2"),
-            html.P([html.I(className="fas fa-chart-simple me-2"), f"% plantas comerciales: {tasa_talla_comercial:.2f}%".replace('.', ',')], 
-                   className="text-center mb-2"),
-        ]),
-        className="shadow-lg border-0 rounded-4 bg-light mx-auto card-accent",
-        style={"maxWidth": "550px"}
-    )
-
-    opciones = [{'label': h, 'value': h} for h in hojas]
-    return html.Div([html.I(className="fas fa-layer-group me-2"), "Seleccione una hoja:"], 
-                    className="fw-bold text-primary"), opciones, alerta, resumen, \
-           fig_supervivencia, fig_talla_comercial, fig_ejes, fig_ocupacion, fig_altura, fig_porcentaje_col
-
-# =============================================================================
-# EJECUCIÓN
 # =============================================================================
 if __name__ == "__main__":
-    # Para producción en Render, usar el puerto que asigna la plataforma
-    port = int(os.environ.get("PORT", 8050))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=8050, debug=True)
