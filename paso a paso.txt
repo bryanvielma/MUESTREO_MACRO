@@ -1,0 +1,82 @@
+¡Entendido! Vamos a unificar todo para usar **`venv`** (sin el punto) y así quitar cualquier rastro de confusión. Olvidemos el `.venv` y hagámoslo simple y directo.
+
+Sigue estos pasos **exactamente** para dejar tu entorno `C:\SYNERGIABIO\FEM` impecable:
+
+### 1. Limpieza total (Cierra VS Code)
+
+1. Cierra VS Code.
+2. Ve a la carpeta `C:\SYNERGIABIO\FEM` en el explorador de archivos.
+3. **Borra** manualmente cualquier carpeta que se llame `venv` o `.venv`.
+4. Asegúrate de que la carpeta esté vacía de entornos virtuales.
+
+### 2. Crea un entorno "Oficial" llamado `venv`
+
+1. Abre una terminal (PowerShell) en `C:\SYNERGIABIO\FEM`.
+2. Escribe este comando para crear un entorno nuevo y sólido:
+```powershell
+python -m venv .venv
+
+```
+
+
+
+### 3. Activa el entorno
+
+1. En la misma terminal, ejecuta:
+```powershell
+.\.venv\Scripts\Activate.ps1
+
+```
+
+
+*(Si te da un error de ejecución, recuerda ejecutar primero: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process`)*.
+2. Verás que a la izquierda de tu terminal ahora aparece `(venv)`. **Eso significa que el entorno está activo.**
+
+### 4. Instala tus librerías (Ahora que el entorno es `venv`)
+
+1. Asegúrate de que tu archivo `requirements.txt` esté en esa carpeta (`C:\SYNERGIABIO\FEM\requirements.txt`).
+2. Instala todo de una vez:
+```powershell
+python -m pip install -r requirements.txt
+
+```
+
+taskkill /f /im chrome.exe /t
+taskkill /f /im chromedriver.exe /t
+python main_macro.py
+python main_enraizamiento.py
+---
+
+### 5. Configura VS Code para que apunte a `venv`
+
+Ahora que el entorno está creado, vamos a decirle a VS Code que "mire" solo ahí:
+
+1. Abre VS Code.
+2. Presiona `Ctrl + Shift + P`.
+3. Escribe **"Python: Select Interpreter"**.
+4. Selecciona la opción que dice **`venv ('venv': venv)`**. (Asegúrate de que la ruta sea `C:\SYNERGIABIO\FEM\venv\Scripts\python.exe`).
+5. **Reload:** Presiona `Ctrl + Shift + P` otra vez y escribe **"Developer: Reload Window"**.
+
+### ¿Cómo verificar que quedó bien?
+
+Abre una nueva terminal en VS Code. Debería decir `(venv)` a la izquierda. Luego escribe:
+
+```powershell
+pip list
+
+```
+
+**Si en la lista que aparece ahora ves `webdriver-manager`, `pandas`, `selenium`, etc., ¡lo habremos logrado!**
+
+Si tras hacer esto VS Code sigue mostrando el error `Import "webdriver_manager.chrome" could not be resolved`, es simplemente porque el editor no ha terminado de indexar los archivos. Dale 30 segundos y verás cómo desaparece el error.
+
+¿Te aparece el `(venv)` al abrir la terminal? Cuéntame y, si es así, intenta correr tu script.
+
+
+git init
+echo ".venv/" > .gitignore
+git add .
+git commit -m "Estructura inicial del proyecto"
+git push origin main 
+
+

@@ -422,3 +422,255 @@
 4  897  M02T118LA5601  06-04-2026  Arándano  02T118LA5  NO LMC ( 100% )               56         NO  En inventario
 2026-04-10 00:45:45,865 - INFO - 💾 Datos guardados en 'C:\SYNERGIABIO\APP_MACRO\data\BioTecnos.xlsx'
 2026-04-10 00:45:48,161 - INFO - 🚪 Driver cerrado.
+2026-04-10 03:47:31,050 - INFO - 📅 Rango: 2025-08-10 → 2026-04-10 (8 meses atrás)
+2026-04-10 03:47:31,055 - INFO - ====== WebDriver manager ======
+2026-04-10 03:47:32,617 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-10 03:47:33,356 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-10 03:47:33,996 - INFO - Driver [C:\Users\bryan\.wdm\drivers\chromedriver\win64\146.0.7680.165\chromedriver-win32/chromedriver.exe] found in cache
+2026-04-10 03:47:37,855 - INFO - ✅ Driver creado exitosamente.
+2026-04-10 03:47:37,855 - INFO - 🔐 Iniciando sesión...
+2026-04-10 03:47:42,358 - INFO - ✅ Sesión iniciada correctamente
+2026-04-10 03:47:44,359 - INFO - 🌐 Navegando a: https://sisbiotecnos.cl/ex_vitro/lote_maceta/index?fecha_inicio=2025-08-10&fecha_termino=2026-04-10&especie=*&variedad=*&estado=2
+2026-04-10 03:47:48,286 - INFO - 🔘 Haciendo clic en 'Aplicar filtros'...
+2026-04-10 03:47:51,078 - INFO - 📄 Procesando página 1...
+2026-04-10 03:47:58,479 - INFO -    ✅ 50 filas extraídas
+2026-04-10 03:48:00,679 - INFO - 📄 Procesando página 2...
+2026-04-10 03:48:07,879 - INFO -    ✅ 50 filas extraídas
+2026-04-10 03:48:10,036 - INFO - 📄 Procesando página 3...
+2026-04-10 03:48:17,271 - INFO -    ✅ 50 filas extraídas
+2026-04-10 03:48:19,441 - INFO - 📄 Procesando página 4...
+2026-04-10 03:48:23,054 - INFO -    ✅ 25 filas extraídas
+2026-04-10 03:48:23,090 - INFO - 📌 Última página alcanzada.
+2026-04-10 03:48:23,093 - INFO - 
+🎉 Total de registros extraídos: 175
+2026-04-10 03:48:23,093 - INFO - 
+📊 Vista previa:
+2026-04-10 03:48:23,108 - INFO - 
+    ID         Código       Fecha   Especie   Variedad    LMC Dominante Macetas actuales Reagrupado         Estado
+0  901  M02T118LB5601  06-04-2026  Arándano  02T118LB5  NO LMC ( 100% )               92         NO  En inventario
+1  900  M02T114LA5602  06-04-2026  Arándano  02T114LA5  NO LMC ( 100% )              204         NO  En inventario
+2  899  M02T113LA5601  06-04-2026  Arándano  02T113LA5  NO LMC ( 100% )               52         NO  En inventario
+3  898  M02T119LA5601  06-04-2026  Arándano  02T119LA5  NO LMC ( 100% )               64         NO  En inventario
+4  897  M02T118LA5601  06-04-2026  Arándano  02T118LA5  NO LMC ( 100% )               56         NO  En inventario
+2026-04-10 03:48:23,401 - INFO - 💾 Datos guardados en 'C:\SYNERGIABIO\APP_MACRO\data\BioTecnos.xlsx'
+2026-04-10 03:48:25,691 - INFO - 🚪 Driver cerrado.
+2026-04-13 00:45:07,436 - INFO - 📅 Rango: 2025-08-13 → 2026-04-13 (8 meses atrás)
+2026-04-13 00:45:07,446 - INFO - ====== WebDriver manager ======
+2026-04-13 00:45:09,460 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-13 00:45:10,269 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-13 00:45:10,999 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-13 00:45:12,657 - INFO - WebDriver version 146.0.7680.165 selected
+2026-04-13 00:45:12,668 - INFO - Modern chrome version https://storage.googleapis.com/chrome-for-testing-public/146.0.7680.165/win32/chromedriver-win32.zip
+2026-04-13 00:45:12,669 - INFO - About to download new driver from https://storage.googleapis.com/chrome-for-testing-public/146.0.7680.165/win32/chromedriver-win32.zip
+2026-04-13 00:45:13,416 - INFO - Driver downloading response is 200
+2026-04-13 00:45:17,652 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-13 00:45:18,574 - INFO - Driver has been saved in cache [C:\Users\bryan\.wdm\drivers\chromedriver\win64\146.0.7680.165]
+2026-04-13 00:45:22,599 - INFO - ✅ Driver creado exitosamente.
+2026-04-13 00:45:22,600 - INFO - 🔐 Iniciando sesión...
+2026-04-13 00:45:24,494 - INFO - ✅ Sesión iniciada correctamente
+2026-04-13 00:45:26,495 - INFO - 🌐 Navegando a: https://sisbiotecnos.cl/ex_vitro/lote_maceta/index?fecha_inicio=2025-08-13&fecha_termino=2026-04-13&especie=*&variedad=*&estado=2
+2026-04-13 00:45:30,467 - INFO - 🔘 Haciendo clic en 'Aplicar filtros'...
+2026-04-13 00:45:33,209 - INFO - 📄 Procesando página 1...
+2026-04-13 00:45:40,346 - INFO -    ✅ 50 filas extraídas
+2026-04-13 00:45:42,557 - INFO - 📄 Procesando página 2...
+2026-04-13 00:45:49,617 - INFO -    ✅ 50 filas extraídas
+2026-04-13 00:45:51,768 - INFO - 📄 Procesando página 3...
+2026-04-13 00:45:58,481 - INFO -    ✅ 50 filas extraídas
+2026-04-13 00:46:00,612 - INFO - 📄 Procesando página 4...
+2026-04-13 00:46:04,311 - INFO -    ✅ 27 filas extraídas
+2026-04-13 00:46:04,338 - INFO - 📌 Última página alcanzada.
+2026-04-13 00:46:04,340 - INFO - 
+🎉 Total de registros extraídos: 177
+2026-04-13 00:46:04,341 - INFO - 
+📊 Vista previa:
+2026-04-13 00:46:04,356 - INFO - 
+    ID         Código       Fecha   Especie   Variedad    LMC Dominante Macetas actuales Reagrupado         Estado
+0  901  M02T118LB5601  06-04-2026  Arándano  02T118LB5  NO LMC ( 100% )               92         NO  En inventario
+1  900  M02T114LA5602  06-04-2026  Arándano  02T114LA5  NO LMC ( 100% )              204         NO  En inventario
+2  899  M02T113LA5601  06-04-2026  Arándano  02T113LA5  NO LMC ( 100% )               52         NO  En inventario
+3  898  M02T119LA5601  06-04-2026  Arándano  02T119LA5  NO LMC ( 100% )               64         NO  En inventario
+4  897  M02T118LA5601  06-04-2026  Arándano  02T118LA5  NO LMC ( 100% )               56         NO  En inventario
+2026-04-13 00:46:04,654 - INFO - 💾 Datos guardados en 'C:\SYNERGIABIO\APP_MACRO\data\BioTecnos.xlsx'
+2026-04-13 00:46:06,977 - INFO - 🚪 Driver cerrado.
+2026-04-14 00:45:07,480 - INFO - 📅 Rango: 2025-08-14 → 2026-04-14 (8 meses atrás)
+2026-04-14 00:45:07,490 - INFO - ====== WebDriver manager ======
+2026-04-14 00:45:08,690 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-14 00:45:09,500 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-14 00:45:11,122 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-14 00:45:12,813 - INFO - WebDriver version 146.0.7680.165 selected
+2026-04-14 00:45:12,825 - INFO - Modern chrome version https://storage.googleapis.com/chrome-for-testing-public/146.0.7680.165/win32/chromedriver-win32.zip
+2026-04-14 00:45:12,825 - INFO - About to download new driver from https://storage.googleapis.com/chrome-for-testing-public/146.0.7680.165/win32/chromedriver-win32.zip
+2026-04-14 00:45:13,545 - INFO - Driver downloading response is 200
+2026-04-14 00:45:24,946 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-14 00:45:25,893 - INFO - Driver has been saved in cache [C:\Users\bryan\.wdm\drivers\chromedriver\win64\146.0.7680.165]
+2026-04-14 00:45:28,962 - INFO - ✅ Driver creado exitosamente.
+2026-04-14 00:45:28,963 - INFO - 🔐 Iniciando sesión...
+2026-04-14 00:45:34,598 - INFO - ✅ Sesión iniciada correctamente
+2026-04-14 00:45:36,599 - INFO - 🌐 Navegando a: https://sisbiotecnos.cl/ex_vitro/lote_maceta/index?fecha_inicio=2025-08-14&fecha_termino=2026-04-14&especie=*&variedad=*&estado=2
+2026-04-14 00:45:40,684 - INFO - 🔘 Haciendo clic en 'Aplicar filtros'...
+2026-04-14 00:45:43,478 - INFO - 📄 Procesando página 1...
+2026-04-14 00:45:43,563 - INFO -    ✅ 1 filas extraídas
+2026-04-14 00:45:43,601 - INFO - 📌 Última página alcanzada.
+2026-04-14 00:45:43,602 - INFO - 
+🎉 Total de registros extraídos: 1
+2026-04-14 00:45:43,602 - INFO - 
+📊 Vista previa:
+2026-04-14 00:45:43,617 - INFO - 
+            ID
+0  Cargando...
+2026-04-14 00:45:43,936 - INFO - 💾 Datos guardados en 'C:\SYNERGIABIO\APP_MACRO\data\BioTecnos.xlsx'
+2026-04-14 00:45:46,262 - INFO - 🚪 Driver cerrado.
+2026-04-14 01:18:07,773 - INFO - 📅 Rango: 2025-08-14 → 2026-04-14 (8 meses atrás)
+2026-04-14 01:18:07,776 - INFO - ====== WebDriver manager ======
+2026-04-14 01:18:09,467 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-14 01:18:10,302 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-14 01:18:11,003 - INFO - There is no [win64] chromedriver "147.0.7727.56" for browser google-chrome "147.0.7727" in cache
+2026-04-14 01:18:11,003 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-14 01:18:12,590 - INFO - WebDriver version 147.0.7727.56 selected
+2026-04-14 01:18:12,601 - INFO - Modern chrome version https://storage.googleapis.com/chrome-for-testing-public/147.0.7727.56/win32/chromedriver-win32.zip
+2026-04-14 01:18:12,601 - INFO - About to download new driver from https://storage.googleapis.com/chrome-for-testing-public/147.0.7727.56/win32/chromedriver-win32.zip
+2026-04-14 01:18:13,231 - INFO - Driver downloading response is 200
+2026-04-14 01:18:18,562 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-14 01:18:19,536 - INFO - Driver has been saved in cache [C:\Users\bryan\.wdm\drivers\chromedriver\win64\147.0.7727.56]
+2026-04-14 01:18:22,223 - INFO - ✅ Driver creado exitosamente.
+2026-04-14 01:18:22,224 - INFO - 🔐 Iniciando sesión...
+2026-04-14 01:18:25,372 - INFO - ✅ Sesión iniciada correctamente
+2026-04-14 01:18:27,373 - INFO - 🌐 Navegando a: https://sisbiotecnos.cl/ex_vitro/lote_maceta/index?fecha_inicio=2025-08-14&fecha_termino=2026-04-14&especie=*&variedad=*&estado=2
+2026-04-14 01:18:31,310 - INFO - 🔘 Haciendo clic en 'Aplicar filtros'...
+2026-04-14 01:18:34,029 - INFO - 📄 Procesando página 1...
+2026-04-14 01:18:42,049 - INFO -    ✅ 50 filas extraídas
+2026-04-14 01:18:44,279 - INFO - 📄 Procesando página 2...
+2026-04-14 01:18:52,419 - INFO -    ✅ 50 filas extraídas
+2026-04-14 01:18:54,567 - INFO - 📄 Procesando página 3...
+2026-04-14 01:19:02,554 - INFO -    ✅ 50 filas extraídas
+2026-04-14 01:19:04,698 - INFO - 📄 Procesando página 4...
+2026-04-14 01:19:08,836 - INFO -    ✅ 27 filas extraídas
+2026-04-14 01:19:08,873 - INFO - 📌 Última página alcanzada.
+2026-04-14 01:19:08,875 - INFO - 
+🎉 Total de registros extraídos: 177
+2026-04-14 01:19:08,876 - INFO - 
+📊 Vista previa:
+2026-04-14 01:19:08,888 - INFO - 
+    ID         Código       Fecha   Especie   Variedad    LMC Dominante Macetas actuales Reagrupado         Estado
+0  901  M02T118LB5601  06-04-2026  Arándano  02T118LB5  NO LMC ( 100% )               92         NO  En inventario
+1  900  M02T114LA5602  06-04-2026  Arándano  02T114LA5  NO LMC ( 100% )              204         NO  En inventario
+2  899  M02T113LA5601  06-04-2026  Arándano  02T113LA5  NO LMC ( 100% )               52         NO  En inventario
+3  898  M02T119LA5601  06-04-2026  Arándano  02T119LA5  NO LMC ( 100% )               64         NO  En inventario
+4  897  M02T118LA5601  06-04-2026  Arándano  02T118LA5  NO LMC ( 100% )               56         NO  En inventario
+2026-04-14 01:19:09,147 - INFO - 💾 Datos guardados en 'C:\SYNERGIABIO\APP_MACRO\data\BioTecnos.xlsx'
+2026-04-14 01:19:11,505 - INFO - 🚪 Driver cerrado.
+2026-04-15 00:45:09,036 - INFO - 📅 Rango: 2025-08-15 → 2026-04-15 (8 meses atrás)
+2026-04-15 00:45:09,050 - INFO - ====== WebDriver manager ======
+2026-04-15 00:45:10,142 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-15 00:45:11,108 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-15 00:45:11,904 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-15 00:45:13,925 - INFO - WebDriver version 147.0.7727.56 selected
+2026-04-15 00:45:13,935 - INFO - Modern chrome version https://storage.googleapis.com/chrome-for-testing-public/147.0.7727.56/win32/chromedriver-win32.zip
+2026-04-15 00:45:13,936 - INFO - About to download new driver from https://storage.googleapis.com/chrome-for-testing-public/147.0.7727.56/win32/chromedriver-win32.zip
+2026-04-15 00:45:14,641 - INFO - Driver downloading response is 200
+2026-04-15 00:45:19,874 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-15 00:45:20,799 - INFO - Driver has been saved in cache [C:\Users\bryan\.wdm\drivers\chromedriver\win64\147.0.7727.56]
+2026-04-15 00:45:23,378 - INFO - ✅ Driver creado exitosamente.
+2026-04-15 00:45:23,378 - INFO - 🔐 Iniciando sesión...
+2026-04-15 00:45:25,320 - INFO - ✅ Sesión iniciada correctamente
+2026-04-15 00:45:27,321 - INFO - 🌐 Navegando a: https://sisbiotecnos.cl/ex_vitro/lote_maceta/index?fecha_inicio=2025-08-15&fecha_termino=2026-04-15&especie=*&variedad=*&estado=2
+2026-04-15 00:45:31,185 - INFO - 🔘 Haciendo clic en 'Aplicar filtros'...
+2026-04-15 00:45:33,971 - INFO - 📄 Procesando página 1...
+2026-04-15 00:45:41,081 - INFO -    ✅ 50 filas extraídas
+2026-04-15 00:45:43,264 - INFO - 📄 Procesando página 2...
+2026-04-15 00:45:50,292 - INFO -    ✅ 50 filas extraídas
+2026-04-15 00:45:52,449 - INFO - 📄 Procesando página 3...
+2026-04-15 00:45:59,391 - INFO -    ✅ 50 filas extraídas
+2026-04-15 00:46:01,537 - INFO - 📄 Procesando página 4...
+2026-04-15 00:46:05,717 - INFO -    ✅ 30 filas extraídas
+2026-04-15 00:46:05,747 - INFO - 📌 Última página alcanzada.
+2026-04-15 00:46:05,750 - INFO - 
+🎉 Total de registros extraídos: 180
+2026-04-15 00:46:05,750 - INFO - 
+📊 Vista previa:
+2026-04-15 00:46:05,787 - INFO - 
+    ID         Código       Fecha   Especie   Variedad    LMC Dominante Macetas actuales Reagrupado         Estado
+0  904  M02N042LB5601  10-04-2026  Arándano  02N042LB5  NO LMC ( 100% )              656         NO  En inventario
+1  903  M02N042LA5601  10-04-2026  Arándano  02N042LA5  NO LMC ( 100% )              848         NO  En inventario
+2  902  M02N042LC5601  09-04-2026  Arándano  02N042LC5  NO LMC ( 100% )            2.168         NO  En inventario
+3  901  M02T118LB5601  06-04-2026  Arándano  02T118LB5  NO LMC ( 100% )               92         NO  En inventario
+4  900  M02T114LA5602  06-04-2026  Arándano  02T114LA5  NO LMC ( 100% )              204         NO  En inventario
+2026-04-15 00:46:06,162 - INFO - 💾 Datos guardados en 'C:\SYNERGIABIO\APP_MACRO\data\BioTecnos.xlsx'
+2026-04-15 00:46:08,477 - INFO - 🚪 Driver cerrado.
+2026-04-16 00:45:06,335 - INFO - 📅 Rango: 2025-08-16 → 2026-04-16 (8 meses atrás)
+2026-04-16 00:45:06,341 - INFO - ====== WebDriver manager ======
+2026-04-16 00:45:09,240 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-16 00:45:10,039 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-16 00:45:10,716 - INFO - There is no [win64] chromedriver "147.0.7727.57" for browser google-chrome "147.0.7727" in cache
+2026-04-16 00:45:10,717 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-16 00:45:12,165 - INFO - WebDriver version 147.0.7727.57 selected
+2026-04-16 00:45:12,175 - INFO - Modern chrome version https://storage.googleapis.com/chrome-for-testing-public/147.0.7727.57/win32/chromedriver-win32.zip
+2026-04-16 00:45:12,175 - INFO - About to download new driver from https://storage.googleapis.com/chrome-for-testing-public/147.0.7727.57/win32/chromedriver-win32.zip
+2026-04-16 00:45:12,902 - INFO - Driver downloading response is 200
+2026-04-16 00:45:21,487 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-16 00:45:22,399 - INFO - Driver has been saved in cache [C:\Users\bryan\.wdm\drivers\chromedriver\win64\147.0.7727.57]
+2026-04-16 00:45:25,718 - INFO - ✅ Driver creado exitosamente.
+2026-04-16 00:45:25,718 - INFO - 🔐 Iniciando sesión...
+2026-04-16 00:45:27,411 - INFO - ✅ Sesión iniciada correctamente
+2026-04-16 00:45:29,412 - INFO - 🌐 Navegando a: https://sisbiotecnos.cl/ex_vitro/lote_maceta/index?fecha_inicio=2025-08-16&fecha_termino=2026-04-16&especie=*&variedad=*&estado=2
+2026-04-16 00:45:33,169 - INFO - 🔘 Haciendo clic en 'Aplicar filtros'...
+2026-04-16 00:45:35,926 - INFO - 📄 Procesando página 1...
+2026-04-16 00:45:42,707 - INFO -    ✅ 50 filas extraídas
+2026-04-16 00:45:44,926 - INFO - 📄 Procesando página 2...
+2026-04-16 00:45:51,316 - INFO -    ✅ 50 filas extraídas
+2026-04-16 00:45:53,466 - INFO - 📄 Procesando página 3...
+2026-04-16 00:46:00,667 - INFO -    ✅ 50 filas extraídas
+2026-04-16 00:46:02,802 - INFO - 📄 Procesando página 4...
+2026-04-16 00:46:06,686 - INFO -    ✅ 30 filas extraídas
+2026-04-16 00:46:06,712 - INFO - 📌 Última página alcanzada.
+2026-04-16 00:46:06,715 - INFO - 
+🎉 Total de registros extraídos: 180
+2026-04-16 00:46:06,715 - INFO - 
+📊 Vista previa:
+2026-04-16 00:46:06,728 - INFO - 
+    ID         Código       Fecha   Especie   Variedad    LMC Dominante Macetas actuales Reagrupado         Estado
+0  904  M02N042LB5601  10-04-2026  Arándano  02N042LB5  NO LMC ( 100% )              656         NO  En inventario
+1  903  M02N042LA5601  10-04-2026  Arándano  02N042LA5  NO LMC ( 100% )              848         NO  En inventario
+2  902  M02N042LC5601  09-04-2026  Arándano  02N042LC5  NO LMC ( 100% )            2.168         NO  En inventario
+3  901  M02T118LB5601  06-04-2026  Arándano  02T118LB5  NO LMC ( 100% )               92         NO  En inventario
+4  900  M02T114LA5602  06-04-2026  Arándano  02T114LA5  NO LMC ( 100% )              204         NO  En inventario
+2026-04-16 00:46:06,999 - INFO - 💾 Datos guardados en 'C:\SYNERGIABIO\APP_MACRO\data\BioTecnos.xlsx'
+2026-04-16 00:46:09,298 - INFO - 🚪 Driver cerrado.
+2026-04-17 00:45:06,543 - INFO - 📅 Rango: 2025-08-17 → 2026-04-17 (8 meses atrás)
+2026-04-17 00:45:06,552 - INFO - ====== WebDriver manager ======
+2026-04-17 00:45:09,043 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-17 00:45:09,906 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-17 00:45:10,620 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-17 00:45:12,194 - INFO - WebDriver version 147.0.7727.57 selected
+2026-04-17 00:45:12,204 - INFO - Modern chrome version https://storage.googleapis.com/chrome-for-testing-public/147.0.7727.57/win32/chromedriver-win32.zip
+2026-04-17 00:45:12,204 - INFO - About to download new driver from https://storage.googleapis.com/chrome-for-testing-public/147.0.7727.57/win32/chromedriver-win32.zip
+2026-04-17 00:45:13,091 - INFO - Driver downloading response is 200
+2026-04-17 00:45:18,420 - INFO - Get LATEST chromedriver version for google-chrome
+2026-04-17 00:45:19,301 - INFO - Driver has been saved in cache [C:\Users\bryan\.wdm\drivers\chromedriver\win64\147.0.7727.57]
+2026-04-17 00:45:21,564 - INFO - ✅ Driver creado exitosamente.
+2026-04-17 00:45:21,565 - INFO - 🔐 Iniciando sesión...
+2026-04-17 00:45:24,557 - INFO - ✅ Sesión iniciada correctamente
+2026-04-17 00:45:26,558 - INFO - 🌐 Navegando a: https://sisbiotecnos.cl/ex_vitro/lote_maceta/index?fecha_inicio=2025-08-17&fecha_termino=2026-04-17&especie=*&variedad=*&estado=2
+2026-04-17 00:45:30,419 - INFO - 🔘 Haciendo clic en 'Aplicar filtros'...
+2026-04-17 00:45:33,302 - INFO - 📄 Procesando página 1...
+2026-04-17 00:45:42,037 - INFO -    ✅ 50 filas extraídas
+2026-04-17 00:45:44,261 - INFO - 📄 Procesando página 2...
+2026-04-17 00:45:52,564 - INFO -    ✅ 50 filas extraídas
+2026-04-17 00:45:54,751 - INFO - 📄 Procesando página 3...
+2026-04-17 00:46:03,357 - INFO -    ✅ 50 filas extraídas
+2026-04-17 00:46:05,519 - INFO - 📄 Procesando página 4...
+2026-04-17 00:46:09,843 - INFO -    ✅ 30 filas extraídas
+2026-04-17 00:46:09,866 - INFO - 📌 Última página alcanzada.
+2026-04-17 00:46:09,869 - INFO - 
+🎉 Total de registros extraídos: 180
+2026-04-17 00:46:09,869 - INFO - 
+📊 Vista previa:
+2026-04-17 00:46:09,885 - INFO - 
+    ID         Código       Fecha   Especie   Variedad    LMC Dominante Macetas actuales Reagrupado         Estado
+0  904  M02N042LB5601  10-04-2026  Arándano  02N042LB5  NO LMC ( 100% )              656         NO  En inventario
+1  903  M02N042LA5601  10-04-2026  Arándano  02N042LA5  NO LMC ( 100% )              848         NO  En inventario
+2  902  M02N042LC5601  09-04-2026  Arándano  02N042LC5  NO LMC ( 100% )            2.168         NO  En inventario
+3  901  M02T118LB5601  06-04-2026  Arándano  02T118LB5  NO LMC ( 100% )               92         NO  En inventario
+4  900  M02T114LA5602  06-04-2026  Arándano  02T114LA5  NO LMC ( 100% )              204         NO  En inventario
+2026-04-17 00:46:10,198 - INFO - 💾 Datos guardados en 'C:\SYNERGIABIO\APP_MACRO\data\BioTecnos.xlsx'
+2026-04-17 00:46:12,537 - INFO - 🚪 Driver cerrado.
