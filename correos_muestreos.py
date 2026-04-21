@@ -31,14 +31,15 @@ IMAGEN_RECORTADA = os.path.join(IMAGES_DIR, "imagen_recortada.jpg")
 # =============================================================================
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
-CORREO_REMITENTE = "eurekadatanalytics@gmail.com"
+CORREO_REMITENTE = "bryan.vielma@synergiabio.com"
 # Lista de destinatarios (se envía a todos en el campo 'Para')
 DESTINATARIOS = [
     "karel.rodriguez@synergiabio.com",
     "francisco.lincir@synergiabio.com",
     "milena.gonzalez@synergiabio.com",
     "briseys.calvo@synergiabio.com",
-    "elizabeth.garcia@synergiabio.com"
+    "elizabeth.garcia@synergiabio.com",
+    "eurekadatanalytics@gmail.com",
 ]
 CORREO_DESTINATARIO = ", ".join(DESTINATARIOS)
 CONTRASENA = "xhsl mmrr ocbv zjhs"
