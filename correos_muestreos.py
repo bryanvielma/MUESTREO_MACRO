@@ -42,7 +42,7 @@ DESTINATARIOS = [
     "eurekadatanalytics@gmail.com",
 ]
 CORREO_DESTINATARIO = ", ".join(DESTINATARIOS)
-CONTRASENA = "qkxs dhow nkia rfqr"
+CONTRASENA = "zxvv ijfx dojz acqm"
 
 # =============================================================================
 # CARGA DE DATOS
