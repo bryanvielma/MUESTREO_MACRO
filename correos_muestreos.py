@@ -317,9 +317,6 @@ def enviar_correo(ruta_archivo, nombre_archivo, asunto, cuerpo):
         print(f"❌ Error al enviar: {e}")
         return False
 
-# =============================================================================
-# NUEVA FUNCIÓN: ENVÍO DE CORREO SIN ADJUNTO
-# =============================================================================
 def enviar_correo_sin_adjunto(asunto, cuerpo):
     """Envía un correo sin archivo adjunto."""
     msg = MIMEMultipart()
@@ -340,7 +337,7 @@ def enviar_correo_sin_adjunto(asunto, cuerpo):
         return False
 
 # =============================================================================
-# MAIN MODIFICADO: SIEMPRE SE ENVÍA CORREO (CON O SIN EXCEL)
+# MAIN
 # =============================================================================
 if __name__ == "__main__":
     fecha_hoy = datetime.now().strftime("%d-%m-%Y")
@@ -367,7 +364,7 @@ if __name__ == "__main__":
     asunto = f"MUESTREO - MACRO {fecha_hoy}"
 
     if ruta_excel:
-        # Caso con Excel adjunto
+        # Caso con Excel adjunto (sin cambios)
         cuerpo = f"Adjunto el archivo con los muestreos del día {fecha_hoy}.\n\n"
         cuerpo += f"ID lotes con muestreo hoy: {', '.join(ids_todos)} ({len(ids_todos)} en total)\n"
         cuerpo += f"ID Lotes SynergiaBio Chile: {', '.join(ids_synergia)}\n"
@@ -378,12 +375,12 @@ if __name__ == "__main__":
         # Caso sin Excel: se envía solo texto informativo
         cuerpo = f"Reporte del día {fecha_hoy} (no se generó archivo Excel).\n\n"
         cuerpo += f"ID lotes con muestreo hoy: {', '.join(ids_todos)} ({len(ids_todos)} en total)\n"
-        cuerpo += f"ID Lotes SynergiaBio Chile: {', '.join(ids_synergia)}\n"
-        cuerpo += f"ID Lotes vivero los viñedos: {', '.join(ids_vivero)}\n"
-        
+        cuerpo += f"ID Lotes SynergiaBio Chile: {', '.join(ids_synergia) if ids_synergia else 'ninguno'}\n"
+        cuerpo += f"ID Lotes vivero los viñedos: {', '.join(ids_vivero) if ids_vivero else 'ninguno'}\n"
+
         if len(ids_todos) == 0:
             cuerpo += "\nNo hay lotes con muestreo programado para hoy."
         else:
             cuerpo += "\nTodos los lotes corresponden a 'vivero los viñedos' (contienen 'MN' en I-M-C). Por lo tanto, no se requiere muestreo y no se adjunta archivo Excel."
-        
+
         enviar_correo_sin_adjunto(asunto, cuerpo)
