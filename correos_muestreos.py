@@ -318,7 +318,29 @@ def enviar_correo(ruta_archivo, nombre_archivo, asunto, cuerpo):
         return False
 
 # =============================================================================
-# MAIN
+# NUEVA FUNCIÓN: ENVÍO DE CORREO SIN ADJUNTO
+# =============================================================================
+def enviar_correo_sin_adjunto(asunto, cuerpo):
+    """Envía un correo sin archivo adjunto."""
+    msg = MIMEMultipart()
+    msg['From'] = CORREO_REMITENTE
+    msg['To'] = CORREO_DESTINATARIO
+    msg['Subject'] = asunto
+    msg.attach(MIMEText(cuerpo, 'plain'))
+
+    try:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(CORREO_REMITENTE, CONTRASENA)
+            server.send_message(msg)
+        print(f"📧 Correo informativo enviado a {CORREO_DESTINATARIO} (sin adjunto)")
+        return True
+    except Exception as e:
+        print(f"❌ Error al enviar: {e}")
+        return False
+
+# =============================================================================
+# MAIN MODIFICADO: SIEMPRE SE ENVÍA CORREO (CON O SIN EXCEL)
 # =============================================================================
 if __name__ == "__main__":
     fecha_hoy = datetime.now().strftime("%d-%m-%Y")
@@ -337,19 +359,31 @@ if __name__ == "__main__":
     # Generar Excel solo con los lotes sin MN
     ruta_excel = generar_excel_multiple(lotes_sin_mn)
 
+    # Preparar listas de IDs (comunes para ambos casos)
+    ids_todos = [str(lote["ID"]) for lote in lotes_sin_mn + lotes_con_mn]
+    ids_synergia = [str(lote["ID"]) for lote in lotes_sin_mn]
+    ids_vivero = [str(lote["ID"]) for lote in lotes_con_mn]
+
+    asunto = f"MUESTREO - MACRO {fecha_hoy}"
+
     if ruta_excel:
-        asunto = f"MUESTREO - MACRO {fecha_hoy}"
-
-        ids_todos = [str(lote["ID"]) for lote in lotes_sin_mn + lotes_con_mn]
-        ids_synergia = [str(lote["ID"]) for lote in lotes_sin_mn]
-        ids_vivero = [str(lote["ID"]) for lote in lotes_con_mn]
-
+        # Caso con Excel adjunto
         cuerpo = f"Adjunto el archivo con los muestreos del día {fecha_hoy}.\n\n"
         cuerpo += f"ID lotes con muestreo hoy: {', '.join(ids_todos)} ({len(ids_todos)} en total)\n"
         cuerpo += f"ID Lotes SynergiaBio Chile: {', '.join(ids_synergia)}\n"
         cuerpo += f"ID Lotes vivero los viñedos: {', '.join(ids_vivero)}\n"
         cuerpo += "Lotes que están en vivero los viñedos NO se incluyen en el muestreo."
-
         enviar_correo(ruta_excel, os.path.basename(ruta_excel), asunto, cuerpo)
     else:
-        print("No se generó Excel. No se envía correo.")
+        # Caso sin Excel: se envía solo texto informativo
+        cuerpo = f"Reporte del día {fecha_hoy} (no se generó archivo Excel).\n\n"
+        cuerpo += f"ID lotes con muestreo hoy: {', '.join(ids_todos)} ({len(ids_todos)} en total)\n"
+        cuerpo += f"ID Lotes SynergiaBio Chile: {', '.join(ids_synergia)}\n"
+        cuerpo += f"ID Lotes vivero los viñedos: {', '.join(ids_vivero)}\n"
+        
+        if len(ids_todos) == 0:
+            cuerpo += "\nNo hay lotes con muestreo programado para hoy."
+        else:
+            cuerpo += "\nTodos los lotes corresponden a 'vivero los viñedos' (contienen 'MN' en I-M-C). Por lo tanto, no se requiere muestreo y no se adjunta archivo Excel."
+        
+        enviar_correo_sin_adjunto(asunto, cuerpo)
