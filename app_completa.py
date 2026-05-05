@@ -587,8 +587,8 @@ PLOT_LAYOUT = dict(
     legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#475569")),
 )
 
-# Colores llamativos para los gráficos
-CHART_COLORS = ["#E63946", "#F4A261", "#2A9D8F", "#E76F51", "#457B9D", "#6A4C93"]
+# Colores eléctricos para los gráficos
+CHART_COLORS = ["#FF2D55", "#FF9F0A", "#00C7BE", "#FF6B35", "#0A84FF", "#BF5AF2"]
 
 # =============================================================================
 # APP
@@ -811,8 +811,7 @@ def procesar_hoja(decoded, sheet_name, filename):
     try:
         df_raw = pd.read_excel(BytesIO(decoded), sheet_name=sheet_name, header=None)
     except Exception as e:
-        return {"error": str(e), "alerta": html.Div([f"Error: {str(e)}"], className="text-danger"),
-                "resumen": None, **{k: empty_fig for k in
+        return {"error": str(e), "resumen": None, **{k: empty_fig for k in
                 ["fig_supervivencia","fig_talla_comercial","fig_ejes",
                  "fig_ocupacion","fig_altura","fig_porcentaje_col"]}}
 
@@ -825,7 +824,6 @@ def procesar_hoja(decoded, sheet_name, filename):
 
     if header_row_idx is None:
         return {"error": f"No se encontró encabezado 'Fila' en hoja {sheet_name}",
-                "alerta": html.Div(["No se encontró la fila de encabezado 'Fila'."], className="text-warning"),
                 "resumen": None, **{k: empty_fig for k in
                 ["fig_supervivencia","fig_talla_comercial","fig_ejes",
                  "fig_ocupacion","fig_altura","fig_porcentaje_col"]}}
@@ -840,7 +838,6 @@ def procesar_hoja(decoded, sheet_name, filename):
 
     if df.empty:
         return {"error": f"No hay datos numéricos en hoja {sheet_name}",
-                "alerta": html.Div(["No se encontraron filas de datos numéricos."], className="text-warning"),
                 "resumen": None, **{k: empty_fig for k in
                 ["fig_supervivencia","fig_talla_comercial","fig_ejes",
                  "fig_ocupacion","fig_altura","fig_porcentaje_col"]}}
@@ -860,7 +857,6 @@ def procesar_hoja(decoded, sheet_name, filename):
 
     if 'Máximo' not in df.columns:
         return {"error": f"Columna 'Máximo' no encontrada en hoja {sheet_name}",
-                "alerta": html.Div(["Columna 'Máximo' no encontrada."], className="text-warning"),
                 "resumen": None, **{k: empty_fig for k in
                 ["fig_supervivencia","fig_talla_comercial","fig_ejes",
                  "fig_ocupacion","fig_altura","fig_porcentaje_col"]}}
@@ -868,7 +864,6 @@ def procesar_hoja(decoded, sheet_name, filename):
     total_maximo = df['Máximo'].sum()
     if total_maximo == 0:
         return {"error": f"Total Máximo = 0 en hoja {sheet_name}",
-                "alerta": html.Div(["Total Máximo es cero, no se pueden calcular porcentajes."], className="text-warning"),
                 "resumen": None, **{k: empty_fig for k in
                 ["fig_supervivencia","fig_talla_comercial","fig_ejes",
                  "fig_ocupacion","fig_altura","fig_porcentaje_col"]}}
@@ -1078,6 +1073,7 @@ def procesar_hoja(decoded, sheet_name, filename):
 
     resumen = dbc.Container([
         kpi_bar,
+        alerta,
         html.Div([
             html.H5("Tabla de Datos", className="text-center text-primary mt-4"),
             tabla
@@ -1085,7 +1081,7 @@ def procesar_hoja(decoded, sheet_name, filename):
     ])
 
     return {
-        "error": None, "alerta": alerta, "resumen": resumen,
+        "error": None, "resumen": resumen,
         "fig_supervivencia": fig_supervivencia,
         "fig_talla_comercial": fig_talla_comercial,
         "fig_ejes": fig_ejes,
@@ -1137,7 +1133,6 @@ def procesar_excel_completo(contents, filename):
                     dbc.Col(dcc.Graph(figure=resultado["fig_altura"],          config={'displayModeBar':False}), width=12, lg=4, className="mb-3"),
                     dbc.Col(dcc.Graph(figure=resultado["fig_porcentaje_col"],  config={'displayModeBar':False}), width=12, lg=4, className="mb-3"),
                 ], className="g-3"),
-                resultado["alerta"]
             ], fluid=True)
 
         tabs_children.append(
