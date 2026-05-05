@@ -1,0 +1,21 @@
+name: Keep Alive - Render
+
+on:
+  schedule:
+    # Hace ping cada 10 minutos (Render duerme después de 15 min sin actividad)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # También permite ejecutarlo manualmente desde GitHub
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping a la app en Render
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://tu-app.onrender.com/ping)
+          echo "Respuesta del servidor: $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ App activa y respondiendo"
+          else
+            echo "⚠️ El servidor respondió con código $STATUS"
+          fi
