@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Ping a la app en Render
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://tu-app.onrender.com/ping)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://muestreo-macro.onrender.com//ping)
           echo "Respuesta del servidor: $STATUS"
           if [ "$STATUS" = "200" ]; then
             echo "✅ App activa y respondiendo"

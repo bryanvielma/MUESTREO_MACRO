@@ -1281,5 +1281,14 @@ def procesar_excel_completo(contents, filename):
 
 
 # =============================================================================
+# ENDPOINT DE PING (para que el warm-up loader sepa cuándo el server está vivo)
+# =============================================================================
+from flask import Response
+
+@app.server.route("/ping")
+def ping():
+    return Response("ok", status=200, mimetype="text/plain")
+
+# =============================================================================
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8050, debug=True)
